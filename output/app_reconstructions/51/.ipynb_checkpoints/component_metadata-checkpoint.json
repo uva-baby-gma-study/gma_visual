@@ -1,0 +1,64 @@
+{
+  "subject_id": 51,
+  "target": 0,
+  "gma": "Normal",
+  "Class": "Abnormal",
+  "optimal_ranks": 11,
+  "n_components": 6,
+  "sequence_length": 1000,
+  "components": [
+    {
+      "id": 0,
+      "indices": [
+        0,
+        1
+      ],
+      "eig_mag": 0.042030071546986854,
+      "type": "pair"
+    },
+    {
+      "id": 1,
+      "indices": [
+        2,
+        3
+      ],
+      "eig_mag": 0.02749541827360574,
+      "type": "pair"
+    },
+    {
+      "id": 2,
+      "indices": [
+        4,
+        5
+      ],
+      "eig_mag": 0.017467561215383873,
+      "type": "pair"
+    },
+    {
+      "id": 3,
+      "indices": [
+        7,
+        8
+      ],
+      "eig_mag": 0.01162370637429085,
+      "type": "pair"
+    },
+    {
+      "id": 4,
+      "indices": [
+        9,
+        10
+      ],
+      "eig_mag": 0.008127930755278892,
+      "type": "pair"
+    },
+    {
+      "id": 5,
+      "indices": [
+        6
+      ],
+      "eig_mag": 0.000552292330473903,
+      "type": "real"
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "subject_id": 99,
+  "target": 0,
+  "gma": "Normal",
+  "optimal_ranks": 11,
+  "n_components": 9,
+  "sequence_length": 1000,
+  "components": [
+    {
+      "id": 0,
+      "indices": [
+        0,
+        1
+      ],
+      "eig_mag": 0.039619053691018286,
+      "type": "pair"
+    },
+    {
+      "id": 1,
+      "indices": [
+        2
+      ],
+      "eig_mag": 0.024516966042884045,
+      "type": "unpaired"
+    },
+    {
+      "id": 2,
+      "indices": [
+        3
+      ],
+      "eig_mag": 0.023414175821913595,
+      "type": "unpaired"
+    },
+    {
+      "id": 3,
+      "indices": [
+        4
+      ],
+      "eig_mag": 0.02097242046870865,
+      "type": "unpaired"
+    },
+    {
+      "id": 4,
+      "indices": [
+        5
+      ],
+      "eig_mag": 0.019443044431885558,
+      "type": "unpaired"
+    },
+    {
+      "id": 5,
+      "indices": [
+        6,
+        7
+      ],
+      "eig_mag": 0.016039472839496485,
+      "type": "pair"
+    },
+    {
+      "id": 6,
+      "indices": [
+        10
+      ],
+      "eig_mag": 0.0069728033293277696,
+      "type": "unpaired"
+    },
+    {
+      "id": 7,
+      "indices": [
+        9
+      ],
+      "eig_mag": 0.005200329540864842,
+      "type": "unpaired"
+    },
+    {
+      "id": 8,
+      "indices": [
+        8
+      ],
+      "eig_mag": 0.00309984600670014,
+      "type": "unpaired"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "subject_id": 98,
+  "target": 0,
+  "gma": "Poor Repertoire",
+  "optimal_ranks": 8,
+  "n_components": 4,
+  "sequence_length": 1000,
+  "components": [
+    {
+      "id": 0,
+      "indices": [
+        0,
+        1
+      ],
+      "eig_mag": 0.04703555924079622,
+      "type": "pair"
+    },
+    {
+      "id": 1,
+      "indices": [
+        2,
+        3
+      ],
+      "eig_mag": 0.027332498950161765,
+      "type": "pair"
+    },
+    {
+      "id": 2,
+      "indices": [
+        6,
+        7
+      ],
+      "eig_mag": 0.014102684510128841,
+      "type": "pair"
+    },
+    {
+      "id": 3,
+      "indices": [
+        4,
+        5
+      ],
+      "eig_mag": 0.003938016856723202,
+      "type": "pair"
+    }
+  ]
+}

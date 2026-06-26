@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>DMD Motion Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root{
+      --bg:#121212;                 /* super dark grey */
+      --panel: rgba(0,0,0,0.80);    /* 80% transparent black */
+      --text:#ffffff;
+      --muted:#b8b8b8;
+      --border:#2a2a2a;
+      --control:#1c1c1c;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      height:100vh;
+      background:var(--bg);
+      color:var(--text);
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      overflow:hidden;
+    }
+
+    .layout{
+      display:flex;
+      height:100vh;
+      width:100vw;
+      transition:all 220ms ease;
+    }
+
+    .sidebar{
+      width:320px;
+      background:var(--panel);
+      border-right:1px solid var(--border);
+      padding:16px;
+      overflow:auto;
+      transition:width 220ms ease, padding 220ms ease, opacity 220ms ease, border-color 220ms ease;
+    }
+
+    .main{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      padding:16px;
+      gap:12px;
+      min-width:0;
+    }
+
+    h2{
+      margin:0 0 10px 0;
+      font-size:18px;
+      letter-spacing:0.2px;
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .controlRow{
+      align-items:center;
+    }
+
+    .controlRow label{
+      min-width:56px;
+    }
+
+    .controlValue{
+      min-width:44px;
+      text-align:right;
+      font-size:12px;
+      color:var(--muted);
+      font-variant-numeric:tabular-nums;
+    }
+
+    label{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    select, button{
+      background:var(--control);
+      color:var(--text);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:8px 10px;
+      outline:none;
+    }
+
+    input[type="range"]{
+      -webkit-appearance:none;
+      appearance:none;
+      background:transparent;
+      border:none;
+      border-radius:0;
+      padding:0;
+      outline:none;
+      height:22px;
+      flex:1 1 180px;
+      margin:0;
+      --range-progress:50%;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track{
+      height:12px;
+      border-radius:999px;
+      background:linear-gradient(
+        to right,
+        #2c6cff 0,
+        #2c6cff var(--range-progress),
+        rgba(255,255,255,0.2) var(--range-progress),
+        rgba(255,255,255,0.2) 100%
+      );
+      border:1px solid rgba(255,255,255,0.12);
+    }
+
+    input[type="range"]::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      background:#1d8cff;
+      border:1px solid rgba(0,0,0,0.25);
+      margin-top:-4px;
+      box-shadow:0 0 0 3px rgba(29,140,255,0.16);
+    }
+
+    input[type="range"]::-moz-range-track{
+      height:12px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.2);
+      border:1px solid rgba(255,255,255,0.12);
+    }
+
+    input[type="range"]::-moz-range-progress{
+      height:12px;
+      border-radius:999px;
+      background:#2c6cff;
+    }
+
+    input[type="range"]::-moz-range-thumb{
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      background:#1d8cff;
+      border:1px solid rgba(0,0,0,0.25);
+      box-shadow:0 0 0 3px rgba(29,140,255,0.16);
+    }
+
+    button{ cursor:pointer; }
+    button:hover{ border-color:#3a3a3a; }
+    button:disabled{
+      cursor:not-allowed;
+      background:#171717;
+      border-color:#252525;
+      color:#68707d;
+      opacity:0.75;
+    }
+
+    button:disabled:hover{
+      border-color:#252525;
+    }
+
+    .canvasWrap{
+      flex:1;
+      display:flex;
+      gap:12px;
+      min-height:0;
+      transition:opacity 220ms ease, transform 220ms ease;
+    }
+
+    canvas{
+      flex:1;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:#0d0d0d;
+      width:100%;
+      height:100%;
+    }
+
+    .small{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .helpList{
+      line-height:1.45;
+    }
+
+    .helpList strong{
+      color:#e8edf5;
+      font-weight:700;
+    }
+
+    .helpRow{
+      margin-bottom:6px;
+    }
+
+    .helpOptions{
+      margin:4px 0 0 18px;
+      padding:0;
+    }
+
+    .helpOptions li{
+      margin:0 0 4px 0;
+    }
+
+    .visualExplainBtn{
+      width:100%;
+      margin-top:12px;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid #77a4ff;
+      background:linear-gradient(135deg, #2c6cff 0%, #4c8dff 100%);
+      color:#ffffff;
+      font-size:14px;
+      font-weight:700;
+      letter-spacing:0.2px;
+      box-shadow:0 10px 24px rgba(44,108,255,0.28);
+      text-align:center;
+    }
+
+    .visualExplainBtn:hover{
+      border-color:#a9c4ff;
+      background:linear-gradient(135deg, #3a77ff 0%, #629cff 100%);
+    }
+
+    .modalOverlay{
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      background:rgba(0,0,0,0.64);
+      z-index:1000;
+    }
+
+    .modalOverlay[hidden]{
+      display:none;
+    }
+
+    .modalCard{
+      width:min(680px, 100%);
+      max-height:min(78vh, 760px);
+      overflow:auto;
+      background:#101010;
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:18px;
+      box-shadow:0 24px 70px rgba(0,0,0,0.45);
+      padding:24px 24px 20px 24px;
+    }
+
+    .modalHeader{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:14px;
+    }
+
+    .modalTitle{
+      margin:0;
+      font-size:26px;
+      line-height:1.2;
+      color:#f6f8fb;
+    }
+
+    .modalCloseBtn{
+      flex:0 0 auto;
+      min-width:42px;
+      min-height:42px;
+      padding:8px 12px;
+      border-radius:10px;
+      font-size:20px;
+      line-height:1;
+    }
+
+    .modalBody{
+      color:#d8dee7;
+      font-size:18px;
+      line-height:1.65;
+    }
+
+    .modalBody p{
+      margin:0 0 16px 0;
+    }
+
+    .modalBody p:last-child{
+      margin-bottom:0;
+    }
+
+    .section{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:12px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .sectionTitle{
+      font-size:13px;
+      margin:0 0 8px 0;
+      color:#eaeaea;
+    }
+
+    .pill{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      font-size:12px;
+      color:var(--muted);
+      margin: 0 6px 6px 0;
+    }
+
+    .toggleGroup{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+
+    .modeBtn{
+      flex:1 1 130px;
+    }
+
+    .modeBtn.is-active,
+    .visTabBtn.is-active,
+    .miniToggle button.is-active{
+      background:#2c6cff;
+      border-color:#5c87ff;
+      color:#ffffff;
+    }
+
+    .visTabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin:10px 0 8px 0;
+    }
+
+    .visTabBtn{
+      font-size:12px;
+      padding:7px 10px;
+    }
+
+    .miniToggle{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .miniToggle button{
+      flex:1 1 110px;
+      font-size:12px;
+      padding:7px 10px;
+    }
+
+    .jointSelector{
+      margin-top:10px;
+      padding-top:10px;
+      border-top:1px solid rgba(255,255,255,0.08);
+    }
+
+    .jointSelectorHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .jointSelectorHeader .sectionTitle{
+      margin:0;
+    }
+
+    .clearBtn{
+      font-size:11px;
+      padding:6px 9px;
+      border-radius:8px;
+    }
+
+    .jointGrid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px 10px;
+      margin-top:8px;
+    }
+
+    .jointOption{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .jointOption input{
+      margin:0;
+    }
+
+    .layout.compareModeActive .sidebar{
+      width:0;
+      min-width:0;
+      padding:0;
+      opacity:0;
+      overflow:hidden;
+      border-right-color:transparent;
+      pointer-events:none;
+    }
+
+    .layout.compareModeActive .main{
+      padding-left:20px;
+      padding-right:20px;
+    }
+
+    .layout.compareModeActive .canvasWrap{
+      display:none;
+    }
+
+    .compareModeView{
+      flex:1;
+      min-height:0;
+      display:flex;
+      gap:18px;
+      opacity:0;
+      transform:translateY(16px);
+      pointer-events:none;
+      transition:opacity 220ms ease, transform 220ms ease;
+    }
+
+    .compareModeView[hidden]{
+      display:none;
+    }
+
+    .layout.compareModeActive .compareModeView{
+      opacity:1;
+      transform:translateY(0);
+      pointer-events:auto;
+    }
+
+    .comparePane{
+      flex:1 1 0;
+      min-width:0;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      background:rgba(255,255,255,0.02);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:24px;
+      padding:18px;
+      overflow:hidden;
+      transition:transform 260ms ease, opacity 260ms ease;
+    }
+
+    .layout.compareModeActive .comparePane.currentPane{
+      transform:translateX(12px);
+    }
+
+    .layout.compareModeActive .comparePane.normalPane{
+      transform:translateX(0);
+    }
+
+    .comparePaneHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding-bottom:2px;
+    }
+
+    .comparePaneTitle{
+      font-size:17px;
+      font-weight:700;
+      color:#edf2f7;
+    }
+
+    .comparePaneSubtitle{
+      font-size:12px;
+      color:#94a3b8;
+      text-align:right;
+    }
+
+    .normalReferenceHeader{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+    }
+
+    .normalReferenceControls{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      padding-top:2px;
+    }
+
+    .normalReferenceBtn{
+      width:28px;
+      height:24px;
+      min-width:0;
+      padding:0;
+      border-radius:8px;
+      border:1px solid rgba(125,162,255,0.55);
+      background:rgba(44,108,255,0.12);
+      color:#e8f0ff;
+      font-size:13px;
+      font-weight:800;
+      line-height:1;
+    }
+
+    .normalReferenceBtn:hover{
+      border-color:#9fbbff;
+      background:rgba(44,108,255,0.22);
+    }
+
+    .compareHeaderActions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .compareToggleBtn{
+      border-color:#5c87ff;
+      background:rgba(44,108,255,0.18);
+      color:#edf5ff;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .compareToggleBtn:hover{
+      border-color:#8cadff;
+      background:rgba(44,108,255,0.26);
+    }
+
+    .comparePaneContent{
+      flex:1;
+      min-height:0;
+      display:flex;
+      gap:12px;
+    }
+
+    .compareViewerWrap{
+      flex:0 0 31%;
+      display:flex;
+      min-width:220px;
+    }
+
+    .compareVizWrap{
+      flex:1;
+      display:flex;
+      min-width:0;
+      overflow:hidden;
+    }
+
+    .compareCanvas{
+      width:100%;
+      height:100%;
+    }
+
+    .compareModeView.compareShowsVisual .compareViewerWrap,
+    .compareModeView.compareShowsSkeleton .compareVizWrap{
+      display:none;
+    }
+
+    .compareModeView.compareShowsVisual .compareVizWrap,
+    .compareModeView.compareShowsSkeleton .compareViewerWrap{
+      flex:1 1 auto;
+      min-width:0;
+      display:flex;
+    }
+
+    .compareDivider{
+      flex:0 0 1px;
+      align-self:stretch;
+      background:linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0.18) 18%,
+        rgba(255,255,255,0.18) 82%,
+        rgba(255,255,255,0)
+      );
+    }
+
+    .compareActionBtn{
+      width:100%;
+      margin-top:10px;
+      border-radius:12px;
+      padding:12px 14px;
+      background:linear-gradient(135deg, #1f5fff 0%, #4e85ff 100%);
+      border:1px solid rgba(169,196,255,0.7);
+      color:#ffffff;
+      font-size:14px;
+      font-weight:700;
+      line-height:1.3;
+      text-align:center;
+      box-shadow:0 20px 42px rgba(17,72,191,0.34);
+    }
+
+    .compareActionBtn:hover{
+      border-color:#d5e2ff;
+      transform:translateY(-1px);
+    }
+
+    .compareActionBtn[hidden]{
+      display:none;
+    }
+
+    .exitCompareBtn{
+      min-width:142px;
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.16);
+      background:rgba(255,255,255,0.05);
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .compareModeStatus{
+      font-size:12px;
+      color:#94a3b8;
+      margin-top:-4px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>DMD Viewer</h2>
+
+      <div class="section">
+        <div class="sectionTitle">Selection</div>
+
+        <div class="row">
+          <label for="subjectSelect">Infant</label>
+          <select id="subjectSelect">
+            <option value="">Loading…</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label for="sequenceSelect">Sequence</label>
+          <select id="sequenceSelect">
+            <option value="ground_truth.json">Ground Truth</option>
+            <option value="global_reconstruction.json">Global Reconstruction</option>
+          </select>
+        </div>
+
+        <div class="row small" id="status"></div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle">Visualization</div>
+        <div class="toggleGroup" role="group" aria-label="Visualization mode">
+          <button id="dynamicViewBtn" class="modeBtn is-active" type="button">Dynamic</button>
+          <button id="staticViewBtn" class="modeBtn" type="button">Static</button>
+        </div>
+        <div id="visualizationTabs" class="visTabs" aria-label="Visualization choices"></div>
+        <div id="visualizationHelp" class="small helpList"></div>
+        <button id="visualizationExplainBtn" class="visualExplainBtn" type="button">
+          What Does This Visual Show?
+        </button>
+        <button id="compareWithNormalBtn" class="compareActionBtn" type="button" hidden>
+          Compare with Normal Baby
+        </button>
+        <div id="lineMetricSection" class="jointSelector" hidden>
+          <div class="sectionTitle">Motion Metric</div>
+          <div class="miniToggle" role="group" aria-label="Line plot metric">
+            <button id="lineMetricSpeedBtn" type="button">Speed</button>
+            <button id="lineMetricAccelerationBtn" type="button">Acceleration</button>
+          </div>
+        </div>
+        <div id="jointSelectorSection" class="jointSelector" hidden>
+          <div class="jointSelectorHeader">
+            <div class="sectionTitle">Joint Selection</div>
+            <button id="clearJointSelectionBtn" class="clearBtn" type="button">Clear all</button>
+          </div>
+          <div id="jointSelectionHint" class="small"></div>
+          <div id="jointSelectionList" class="jointGrid"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle">Features</div>
+        <div class="row controlRow">
+          <label for="zoomSlider">Zoom</label>
+          <input id="zoomSlider" type="range" min="100" max="900" value="300" />
+          <span id="zoomValueLabel" class="controlValue">1.0x</span>
+        </div>
+
+        <div class="row controlRow">
+          <label for="speedSlider">Speed</label>
+          <input id="speedSlider" type="range" min="0.5" max="4.0" step="0.1" value="1.0" />
+          <span id="speedValueLabel" class="controlValue">1.0x</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle">Metadata</div>
+        <div class="small" id="metaBox">Select an infant to load metadata.</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="row controlRow">
+        <button id="playBtn">Play</button>
+        <button id="pauseBtn">Pause</button>
+
+        <label for="frameSlider">Frame</label>
+        <input type="range" id="frameSlider" min="0" max="0" value="0" />
+        <span class="small" id="frameLabel">0</span>
+      </div>
+
+      <div id="mainCanvasWrap" class="canvasWrap">
+
+  <!-- Left: Global reconstruction -->
+  <div style="flex:0 0 30%; display:flex;">
+    <canvas id="viewer" width="600" height="600"></canvas>
+  </div>
+
+  <!-- Right: switchable visualization panel -->
+  <div id="rightPanel" style="flex:1; display:flex; min-width:0;">
+    <canvas id="visualizationCanvas" width="1100" height="600"></canvas>
+  </div>
+
+</div>
+
+      <div id="compareModeView" class="compareModeView compareShowsVisual" hidden>
+        <section class="comparePane currentPane">
+          <div class="comparePaneHeader">
+            <div>
+              <div id="compareCurrentTitle" class="comparePaneTitle">Current Baby</div>
+              <div id="compareCurrentSubtitle" class="comparePaneSubtitle" style="text-align:left;">Current subject</div>
+            </div>
+            <div class="compareHeaderActions">
+              <div id="compareModeStatus" class="compareModeStatus">Visual comparison with the normal reference</div>
+              <button id="compareViewToggleBtn" class="compareToggleBtn" type="button">Compare Skeletons</button>
+            </div>
+          </div>
+          <div class="comparePaneContent">
+            <div class="compareViewerWrap">
+              <canvas id="compareCurrentViewer" class="compareCanvas" width="600" height="600"></canvas>
+            </div>
+            <div class="compareVizWrap">
+              <canvas id="compareCurrentVisualization" class="compareCanvas" width="1100" height="600"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <div class="compareDivider" aria-hidden="true"></div>
+
+        <section class="comparePane normalPane">
+          <div class="comparePaneHeader">
+            <div class="normalReferenceHeader">
+              <div>
+                <div id="compareNormalTitle" class="comparePaneTitle">Normal Baby</div>
+                <div id="compareNormalSubtitle" class="comparePaneSubtitle" style="text-align:left;">Reference subject</div>
+              </div>
+              <div class="normalReferenceControls" aria-label="Normal baby reference selector">
+                <button id="normalReferencePrevBtn" class="normalReferenceBtn" type="button" title="Previous normal baby">▲</button>
+                <button id="normalReferenceNextBtn" class="normalReferenceBtn" type="button" title="Next normal baby">▼</button>
+              </div>
+            </div>
+            <button id="exitCompareBtn" class="exitCompareBtn" type="button">Exit Comparison</button>
+          </div>
+          <div class="comparePaneContent">
+            <div class="compareViewerWrap">
+              <canvas id="compareNormalViewer" class="compareCanvas" width="600" height="600"></canvas>
+            </div>
+            <div class="compareVizWrap">
+              <canvas id="compareNormalVisualization" class="compareCanvas" width="1100" height="600"></canvas>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="visualizationExplainModal" class="modalOverlay" hidden aria-hidden="true">
+    <div
+      class="modalCard"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="visualizationExplainTitle"
+      aria-describedby="visualizationExplainBody"
+    >
+      <div class="modalHeader">
+        <h3 id="visualizationExplainTitle" class="modalTitle">What This Visual Shows</h3>
+        <button id="visualizationExplainCloseBtn" class="modalCloseBtn" type="button" aria-label="Close explanation">
+          ×
+        </button>
+      </div>
+      <div id="visualizationExplainBody" class="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="visualizations/dynamic/dynamicHeatmap.js?v=20260515d"></script>
+  <script src="visualizations/dynamic/dynamicLinePlot.js?v=20260611c"></script>
+  <script src="visualizations/dynamic/dynamicStackedLinePlot.js?v=20260611h"></script>
+  <script src="visualizations/dynamic/dynamicEpisodePlot.js?v=20260611c"></script>
+  <script src="visualizations/dynamic/dynamicComponentVariancePlot.js?v=20260611e"></script>
+  <script src="visualizations/static/staticHeatmap.js?v=20260611g"></script>
+  <script src="visualizations/static/staticLinePlot.js?v=20260611c"></script>
+  <script src="visualizations/static/staticStackedLinePlot.js?v=20260611h"></script>
+  <script src="visualizations/static/staticEpisodePlot.js?v=20260611c"></script>
+  <script src="visualizations/static/staticComponentVariancePlot.js?v=20260611e"></script>
+  <script src="app.js?v=20260626a"></script>
+</body>
+</html>
