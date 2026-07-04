@@ -62,13 +62,14 @@ let componentSequencePromisesBySubject = new Map();
 let componentSequencesBySubject = new Map();
 let currentSubjectMetadata = null;
 let activeSequenceDescriptor = null;
+let visualizationExplanationPromise = null;
 let normalReferenceDataPromise = null;
 let normalReferenceOptions = [];
 let selectedNormalReferenceIndex = 0;
 const DEFAULT_VISUALIZATION_CANVAS_HEIGHT = 600;
 const DEFAULT_VIEWER_CANVAS_SIZE = 600;
 const MAX_LINE_PLOT_JOINTS = 6;
-const DEFAULT_SEQUENCE_FILE = "ground_truth.json";
+const DEFAULT_SEQUENCE_FILE = "global_reconstruction.json";
 const selectedVisualizationByMode = {
   dynamic: "heatmap",
   static: "heatmap"
@@ -92,82 +93,7 @@ const comparisonState = {
     visualization: null
   }
 };
-const caregiverVisualizationExplanations = {
-  dynamic: {
-    heatmap: {
-      title: "Dynamic Heatmap",
-      paragraphs: [
-        "This view shows where movement has been happening on the screen up to the current frame. Brighter and warmer areas mean more motion has passed through that part of the body space.",
-        "Use this view to see where movement is building over time. If one area keeps lighting up, that means motion is happening there again and again. The frame slider and play button let you watch that pattern grow."
-      ]
-    },
-    lineplot: {
-      title: "Dynamic Individual Lines",
-      paragraphs: [
-        "This view shows one line for each selected joint up to the current frame. The line goes higher when that joint is moving more strongly at that moment.",
-        "Use Speed to see how much the joint is moving from frame to frame. Use Acceleration to see when that movement suddenly changes. Compare the shapes of the lines to see which joints are more active and when."
-      ]
-    },
-    stackedlineplot: {
-      title: "Dynamic Stacked Lines",
-      paragraphs: [
-        "This view puts the selected joints together in one shared graph up to the current frame. Each colored line shows how movement for one joint rises and falls over time.",
-        "Use this view when you want to compare joints directly. If lines rise at the same time, those joints may be moving together. If one line stays much higher, that joint is contributing more movement at that time."
-      ]
-    },
-    episodes: {
-      title: "Dynamic Movement Episodes",
-      paragraphs: [
-        "This view turns movement into blocks instead of lines. Each block marks a period when a joint was more active, and longer blocks mean that active period lasted longer.",
-        "Use this view to notice how often movement happens, how long it lasts, and whether different joints become active at the same time. Taller or stronger-looking blocks mean the movement during that period was more intense."
-      ]
-    },
-    componentvariance: {
-      title: "Dynamic Movement Pattern View",
-      paragraphs: [
-        "This view shows how one smaller movement pattern is using different parts of the body up to the current frame. The bars compare the left and right joints, and longer bars mean that joint is playing a bigger part in that pattern so far.",
-        "Use this view to see whether that pattern looks balanced across both sides or leans more to one side. As you move through time, you can watch whether the pattern stays even or becomes more focused in a few joints."
-      ]
-    }
-  },
-  static: {
-    heatmap: {
-      title: "Static Heatmap",
-      paragraphs: [
-        "This view shows how much movement built up over the full sequence for each selected joint. Brighter cells mean that joint accumulated more movement by that time in the recording.",
-        "Use this view to look for when movement starts to build and which joints end up showing the most total activity. Darker areas mean less movement, while brighter areas mean more movement has collected there."
-      ]
-    },
-    lineplot: {
-      title: "Static Individual Lines",
-      paragraphs: [
-        "This view shows one full movement trace for each selected joint across the whole sequence. The line rises when that joint is moving more strongly and falls when it is moving less.",
-        "Use Speed to see how much the joint moves from one frame to the next. Use Acceleration to see when that movement suddenly speeds up or slows down. The marker shows where the current frame sits on the full trace."
-      ]
-    },
-    stackedlineplot: {
-      title: "Static Stacked Lines",
-      paragraphs: [
-        "This view places the selected joints together in one full-sequence graph. Each colored line shows how movement for one joint changes across the entire recording.",
-        "Use this view to compare timing across joints. Lines that rise together suggest joints may be moving at the same time, while a line that stays higher shows a joint that is more active than the others."
-      ]
-    },
-    episodes: {
-      title: "Static Movement Episodes",
-      paragraphs: [
-        "This view shows movement as blocks across the whole recording. Each block marks a period when a joint was more active, and a longer block means that active period lasted longer.",
-        "Use this view to see how often each joint has movement bouts, how long those bouts last, and whether several joints become active at the same time. Bigger blocks point to stronger movement during that bout."
-      ]
-    },
-    componentvariance: {
-      title: "Static Movement Pattern View",
-      paragraphs: [
-        "This view shows how one smaller movement pattern is spread across the body over the full recording. Longer bars mean that joint plays a bigger part in that pattern.",
-        "Use this view to see which joints matter most in that pattern and whether the left and right sides look similar. If one side has much longer bars, that pattern is showing more weight on that side of the body."
-      ]
-    }
-  }
-};
+let caregiverVisualizationExplanations = {};
 
 // Your 17 joints => 34 dims (x,y)
 const joints = [
@@ -316,6 +242,26 @@ async function fetchJson(url) {
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`);
   return await res.json();
+}
+
+async function loadVisualizationExplanations() {
+  if (visualizationExplanationPromise) {
+    return visualizationExplanationPromise;
+  }
+
+  visualizationExplanationPromise = (async () => {
+    try {
+      const url = new URL("visualization_explanations.json", window.location.href).toString();
+      caregiverVisualizationExplanations = await fetchJson(url);
+      return caregiverVisualizationExplanations;
+    } catch (error) {
+      console.error("Failed to load visualization explanations:", error);
+      caregiverVisualizationExplanations = {};
+      return caregiverVisualizationExplanations;
+    }
+  })();
+
+  return visualizationExplanationPromise;
 }
 
 function getNormalReferenceSubject() {
@@ -1168,15 +1114,31 @@ function getVisualizationExplanation(definition) {
   return (
     modeText[definition?.id] || {
       title: definition?.label || "Visualization",
-      paragraphs: [
-        "This view shows one way of looking at the movement in the recording.",
+      description: [
+        "This view shows one way of looking at the movement in the recording."
+      ],
+      compareWithNormal: [
         "Use the controls in the sidebar to change what you see and compare patterns over time."
       ]
     }
   );
 }
 
-function openVisualizationExplanationModal() {
+function renderExplanationSection(title, paragraphs) {
+  const safeParagraphs = Array.isArray(paragraphs) ? paragraphs : [];
+  if (!safeParagraphs.length) {
+    return "";
+  }
+
+  return (
+    `<section class="modalSection">` +
+    `<div class="modalSectionTitle">${escapeHtml(title)}</div>` +
+    safeParagraphs.map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join("") +
+    `</section>`
+  );
+}
+
+async function openVisualizationExplanationModal() {
   const activeDef = getVisualizationDefinition(
     visualizationMode,
     getActiveVisualizationId()
@@ -1185,11 +1147,15 @@ function openVisualizationExplanationModal() {
     return;
   }
 
+  await loadVisualizationExplanations();
   const explanation = getVisualizationExplanation(activeDef);
   visualizationExplainTitle.textContent = explanation.title;
-  visualizationExplainBody.innerHTML = (explanation.paragraphs || [])
-    .map(paragraph => `<p>${escapeHtml(paragraph)}</p>`)
-    .join("");
+  visualizationExplainBody.innerHTML =
+    renderExplanationSection("Description", explanation.description) +
+    renderExplanationSection(
+      "What to compare with normal infant movement",
+      explanation.compareWithNormal
+    );
 
   visualizationExplainModal.hidden = false;
   visualizationExplainModal.setAttribute("aria-hidden", "false");
@@ -1402,13 +1368,11 @@ function renderVisualizationTabs() {
 
   const activeDef = getVisualizationDefinition(visualizationMode, activeId);
   if (visualizationHelp) {
-    const summary = getVisualizationSummaryText(activeDef);
     const options = getVisualizationOptionsText(activeDef);
     const optionItems = options
       .map(option => `<li>${escapeHtml(option)}</li>`)
       .join("");
     visualizationHelp.innerHTML =
-      `<div class="helpRow">- <strong>Visualization</strong>: ${escapeHtml(summary)}</div>` +
       `<div class="helpRow">- <strong>Options</strong>:</div>` +
       `<ul class="helpOptions">${optionItems}</ul>`;
   }
@@ -1592,7 +1556,11 @@ if (clearJointSelectionBtn) {
 }
 
 if (visualizationExplainBtn) {
-  visualizationExplainBtn.onclick = () => openVisualizationExplanationModal();
+  visualizationExplainBtn.onclick = () => {
+    openVisualizationExplanationModal().catch(error => {
+      console.error("Failed to open visualization explanation:", error);
+    });
+  };
 }
 
 if (compareWithNormalBtn) {
@@ -2310,8 +2278,8 @@ frameSlider.oninput = () => {
 subjectSelect.onchange = async () => {
   const subject = subjectSelect.value;
   sequenceSelect.innerHTML = `
-    <option value="ground_truth.json">Ground Truth</option>
     <option value="global_reconstruction.json">Global Reconstruction</option>
+    <option value="ground_truth.json">Ground Truth</option>
   `;
   currentSubjectMetadata = null;
   updateSourceControls();
@@ -2366,6 +2334,7 @@ if (visualizationCanvas) {
 
 // --------- Startup ----------
 window.addEventListener("resize", handleCanvasResize);
+loadVisualizationExplanations();
 createVisualization();
 syncAllCanvasLayouts();
 updateRangeFill(frameSlider);

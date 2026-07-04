@@ -298,6 +298,20 @@
       margin-bottom:0;
     }
 
+    .modalSection{
+      margin-bottom:22px;
+    }
+
+    .modalSection:last-child{
+      margin-bottom:0;
+    }
+
+    .modalSectionTitle{
+      margin-bottom:8px;
+      color:#f6f8fb;
+      font-weight:800;
+    }
+
     .section{
       border:1px solid var(--border);
       border-radius:14px;
@@ -583,15 +597,7 @@
     }
 
     .compareDivider{
-      flex:0 0 1px;
-      align-self:stretch;
-      background:linear-gradient(
-        to bottom,
-        rgba(255,255,255,0),
-        rgba(255,255,255,0.18) 18%,
-        rgba(255,255,255,0.18) 82%,
-        rgba(255,255,255,0)
-      );
+      display:none;
     }
 
     .compareActionBtn{
@@ -654,8 +660,8 @@
         <div class="row">
           <label for="sequenceSelect">Sequence</label>
           <select id="sequenceSelect">
-            <option value="ground_truth.json">Ground Truth</option>
             <option value="global_reconstruction.json">Global Reconstruction</option>
+            <option value="ground_truth.json">Ground Truth</option>
           </select>
         </div>
 
@@ -677,7 +683,7 @@
           Compare with Normal Baby
         </button>
         <div id="lineMetricSection" class="jointSelector" hidden>
-          <div class="sectionTitle">Motion Metric</div>
+          <div class="sectionTitle">Movement Metric</div>
           <div class="miniToggle" role="group" aria-label="Line plot metric">
             <button id="lineMetricSpeedBtn" type="button">Speed</button>
             <button id="lineMetricAccelerationBtn" type="button">Acceleration</button>
@@ -817,6 +823,6 @@
   <script src="visualizations/static/staticStackedLinePlot.js?v=20260611h"></script>
   <script src="visualizations/static/staticEpisodePlot.js?v=20260611c"></script>
   <script src="visualizations/static/staticComponentVariancePlot.js?v=20260611e"></script>
-  <script src="app.js?v=20260626a"></script>
+  <script src="app.js?v=20260704c"></script>
 </body>
 </html>
