@@ -23,7 +23,6 @@ const normalReferencePrevBtn = document.getElementById("normalReferencePrevBtn")
 const normalReferenceNextBtn = document.getElementById("normalReferenceNextBtn");
 
 const subjectSelect = document.getElementById("subjectSelect");
-const sequenceSelect = document.getElementById("sequenceSelect");
 const frameSlider = document.getElementById("frameSlider");
 const frameLabel = document.getElementById("frameLabel");
 const playBtn = document.getElementById("playBtn");
@@ -335,55 +334,76 @@ async function resolveReconDir() {
   );
 }
 
-function parseSimpleCsvRow(line) {
-  return line.split(",").map(value => value.trim());
+function normalizeJointVarianceComponents(data) {
+  const rows = Array.isArray(data) ? data : data?.components;
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows
+    .map((row, index) => {
+      const componentNumber = Number.parseInt(
+        row.componentNumber ?? row.component ?? index + 1,
+        10
+      );
+      const componentId = Number.isFinite(Number(row.componentId))
+        ? Number.parseInt(row.componentId, 10)
+        : Math.max(0, componentNumber - 1);
+
+      return {
+        component: componentNumber,
+        componentNumber,
+        componentId,
+        values: row.values || {}
+      };
+    })
+    .sort((a, b) => a.componentId - b.componentId);
 }
 
-function parseJointVarianceCsv(csvText) {
-  const lines = csvText
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean);
+async function listJointVarianceSubjectIds(base) {
+  const ids = new Set();
 
-  if (lines.length < 2) {
-    return new Map();
+  try {
+    const folders = await listSubjectFolders(base);
+    folders.forEach(subjectId => ids.add(String(subjectId)));
+  } catch (error) {
+    console.warn("Could not list reconstruction folders for variance data.", error);
   }
 
-  const headers = parseSimpleCsvRow(lines[0]);
-  const valueHeaders = headers.slice(2);
-  const subjectMap = new Map();
-
-  for (let index = 1; index < lines.length; index++) {
-    const values = parseSimpleCsvRow(lines[index]);
-    if (values.length !== headers.length) {
-      continue;
+  try {
+    const indexRows = await fetchJson(new URL("index.json", base).toString());
+    if (Array.isArray(indexRows)) {
+      indexRows.forEach(row => {
+        const subjectId = row?.subjectId ?? row?.subject_id ?? row;
+        if (subjectId !== null && subjectId !== undefined && subjectId !== "") {
+          ids.add(String(subjectId));
+        }
+      });
     }
-
-    const subjectId = values[0];
-    const componentNumber = Number.parseInt(values[1], 10);
-    const jointValues = {};
-
-    valueHeaders.forEach((jointName, jointIndex) => {
-      jointValues[jointName] = Number.parseFloat(values[jointIndex + 2]) || 0;
-    });
-
-    if (!subjectMap.has(subjectId)) {
-      subjectMap.set(subjectId, []);
-    }
-
-    subjectMap.get(subjectId).push({
-      component: componentNumber,
-      componentNumber,
-      componentId: Math.max(0, componentNumber - 1),
-      values: jointValues
-    });
+  } catch (error) {
+    // index.json is a fallback only; folder listing is enough when available.
   }
 
-  subjectMap.forEach(components => {
-    components.sort((a, b) => a.componentId - b.componentId);
-  });
+  try {
+    const normalRows = await fetchJson(new URL("normal_index.json", base).toString());
+    if (Array.isArray(normalRows)) {
+      normalRows.forEach(row => {
+        const subjectId = row?.subjectId ?? row?.subject_id ?? row;
+        if (subjectId !== null && subjectId !== undefined && subjectId !== "") {
+          ids.add(String(subjectId));
+        }
+      });
+    }
+  } catch (error) {
+    // normal_index.json is optional.
+  }
 
-  return subjectMap;
+  const selectedSubject = getCurrentSubject();
+  if (selectedSubject) {
+    ids.add(String(selectedSubject));
+  }
+
+  return Array.from(ids).filter(Boolean);
 }
 
 async function ensureJointVarianceData() {
@@ -398,12 +418,22 @@ async function ensureJointVarianceData() {
 
   jointVarianceDataPromise = (async () => {
     try {
-      const url = new URL(
-        "all_subjects_body_joint_percent_variance.csv",
-        base
-      ).toString();
-      const csvText = await fetchText(url);
-      jointVarianceBySubject = parseJointVarianceCsv(csvText);
+      const subjectIds = await listJointVarianceSubjectIds(base);
+      const subjectMap = new Map();
+
+      await Promise.all(subjectIds.map(async subjectId => {
+        try {
+          const url = new URL(`${subjectId}/joint_percent_variance.json`, base).toString();
+          const components = normalizeJointVarianceComponents(await fetchJson(url));
+          if (components.length > 0) {
+            subjectMap.set(String(subjectId), components);
+          }
+        } catch (error) {
+          console.warn(`No joint percent variance data found for infant ${subjectId}.`, error);
+        }
+      }));
+
+      jointVarianceBySubject = subjectMap;
       return jointVarianceBySubject;
     } catch (error) {
       jointVarianceDataPromise = null;
@@ -517,7 +547,7 @@ async function syncVarianceVisualizationData() {
       view.setSelectedComponent(getSelectedComponentId(subjectId));
     }
   } catch (error) {
-    console.error("Failed to load joint variance CSV:", error);
+    console.error("Failed to load joint variance data:", error);
     if (activeVisualization === view) {
       updateVisualizationCanvasLayout([]);
       view.setVarianceData(subjectId, []);
@@ -750,10 +780,6 @@ function updateSourceControls() {
   const componentMode = isComponentVarianceActive();
   const subject = getCurrentSubject();
   const components = currentSubjectMetadata?.components || [];
-
-  if (sequenceSelect) {
-    sequenceSelect.disabled = componentMode;
-  }
 
   const preferredId = getSelectedComponentId(subject);
   const fallbackId = components[0] ? String(components[0].id) : "";
@@ -1682,8 +1708,8 @@ async function loadSequenceSource(subject, descriptor) {
 function getDefaultSequenceDescriptor() {
   return {
     type: "sequence",
-    path: sequenceSelect?.value || DEFAULT_SEQUENCE_FILE,
-    label: sequenceSelect?.selectedOptions?.[0]?.textContent || "Sequence"
+    path: DEFAULT_SEQUENCE_FILE,
+    label: "Global Reconstruction"
   };
 }
 
@@ -1842,47 +1868,6 @@ function requestComparisonRefresh() {
   refreshComparisonMode().catch(error => {
     console.error("Failed to refresh comparison mode:", error);
   });
-}
-
-function mergeComparisonScaleMaps(leftMap, rightMap) {
-  const merged = new Map();
-
-  [leftMap, rightMap].forEach(scaleMap => {
-    if (!(scaleMap instanceof Map)) {
-      return;
-    }
-
-    scaleMap.forEach((value, key) => {
-      const numericValue = Number.parseFloat(value) || 0;
-      merged.set(key, Math.max(merged.get(key) || 0, numericValue));
-    });
-  });
-
-  return merged;
-}
-
-function syncComparisonVisualizationScales() {
-  const currentView = comparisonState.current.visualization;
-  const normalView = comparisonState.normal.visualization;
-  const supportsSharedScale =
-    currentView &&
-    normalView &&
-    typeof currentView.getComparisonScaleCandidates === "function" &&
-    typeof normalView.getComparisonScaleCandidates === "function" &&
-    typeof currentView.setComparisonScaleByJoint === "function" &&
-    typeof normalView.setComparisonScaleByJoint === "function";
-
-  if (!supportsSharedScale) {
-    return;
-  }
-
-  const sharedScales = mergeComparisonScaleMaps(
-    currentView.getComparisonScaleCandidates(),
-    normalView.getComparisonScaleCandidates()
-  );
-
-  currentView.setComparisonScaleByJoint(sharedScales);
-  normalView.setComparisonScaleByJoint(sharedScales);
 }
 
 async function syncVisualizationInstanceData(view, subject) {
@@ -2136,7 +2121,6 @@ async function refreshComparisonMode() {
       normalSequence,
       normalComponents
     );
-    syncComparisonVisualizationScales();
 
     drawSkeletonFrame(
       compareCurrentViewer?.getContext("2d"),
@@ -2277,10 +2261,6 @@ frameSlider.oninput = () => {
 
 subjectSelect.onchange = async () => {
   const subject = subjectSelect.value;
-  sequenceSelect.innerHTML = `
-    <option value="global_reconstruction.json">Global Reconstruction</option>
-    <option value="ground_truth.json">Ground Truth</option>
-  `;
   currentSubjectMetadata = null;
   updateSourceControls();
 
@@ -2292,12 +2272,6 @@ subjectSelect.onchange = async () => {
   }
 
   await loadMetadata(subject);
-  await loadCurrentSequenceSource();
-};
-
-sequenceSelect.onchange = async () => {
-  const subject = subjectSelect.value;
-  if (!subject) return;
   await loadCurrentSequenceSource();
 };
 

@@ -1,0 +1,173 @@
+[
+  {
+    "component": 1,
+    "componentNumber": 1,
+    "componentId": 0,
+    "values": {
+      "left_shoulder": 4.033427496687076,
+      "right_shoulder": 3.350796995938907,
+      "left_elbow": 9.081919333745672,
+      "right_elbow": 7.117526060138882,
+      "left_wrist": 34.426324757367404,
+      "right_wrist": 17.5739107287931,
+      "left_hip": 0.047221882843773835,
+      "right_hip": 0.04722188284377384,
+      "left_knee": 2.1842149629095835,
+      "right_knee": 4.471614529585856,
+      "left_ankle": 10.550570061513927,
+      "right_ankle": 7.115251307632036
+    }
+  },
+  {
+    "component": 2,
+    "componentNumber": 2,
+    "componentId": 1,
+    "values": {
+      "left_shoulder": 1.0834669556665832,
+      "right_shoulder": 1.9644825943150483,
+      "left_elbow": 1.404139955440678,
+      "right_elbow": 11.127376378777528,
+      "left_wrist": 29.358707382972185,
+      "right_wrist": 30.690877001578144,
+      "left_hip": 0.06892041514138267,
+      "right_hip": 0.06892041514138267,
+      "left_knee": 3.4839716247571806,
+      "right_knee": 3.59025664194953,
+      "left_ankle": 5.530937961871676,
+      "right_ankle": 11.627942672388667
+    }
+  },
+  {
+    "component": 3,
+    "componentNumber": 3,
+    "componentId": 2,
+    "values": {
+      "left_shoulder": 2.41504834917786,
+      "right_shoulder": 3.089082976934698,
+      "left_elbow": 0.3426040227265556,
+      "right_elbow": 9.416466470990809,
+      "left_wrist": 26.508094314775864,
+      "right_wrist": 33.71176751346141,
+      "left_hip": 0.1742374773470612,
+      "right_hip": 0.17423747734706127,
+      "left_knee": 3.646300880046994,
+      "right_knee": 4.921597423482628,
+      "left_ankle": 6.573821849598897,
+      "right_ankle": 9.02674124411017
+    }
+  },
+  {
+    "component": 4,
+    "componentNumber": 4,
+    "componentId": 3,
+    "values": {
+      "left_shoulder": 0.6998436773549571,
+      "right_shoulder": 0.570928132394258,
+      "left_elbow": 9.659827970309552,
+      "right_elbow": 10.529211211520025,
+      "left_wrist": 16.27178150072071,
+      "right_wrist": 17.404061579311662,
+      "left_hip": 0.07040447674407295,
+      "right_hip": 0.07040447674407295,
+      "left_knee": 11.950793099534634,
+      "right_knee": 1.144014731211199,
+      "left_ankle": 20.509908765531236,
+      "right_ankle": 11.118820378623619
+    }
+  },
+  {
+    "component": 5,
+    "componentNumber": 5,
+    "componentId": 4,
+    "values": {
+      "left_shoulder": 1.4558638153917014,
+      "right_shoulder": 0.7329574136770075,
+      "left_elbow": 9.23197587336983,
+      "right_elbow": 9.090828582866594,
+      "left_wrist": 19.644674578866976,
+      "right_wrist": 21.466647284912696,
+      "left_hip": 0.04412491332934204,
+      "right_hip": 0.044124913329342055,
+      "left_knee": 9.204283624954353,
+      "right_knee": 0.5845401363258477,
+      "left_ankle": 20.9162595857811,
+      "right_ankle": 7.583719277195215
+    }
+  },
+  {
+    "component": 6,
+    "componentNumber": 6,
+    "componentId": 5,
+    "values": {
+      "left_shoulder": 1.0519730854551703,
+      "right_shoulder": 1.2292790886646114,
+      "left_elbow": 2.832234105588546,
+      "right_elbow": 33.16221318831987,
+      "left_wrist": 6.085233181126475,
+      "right_wrist": 25.79427701768494,
+      "left_hip": 0.0824153235848049,
+      "right_hip": 0.0824153235848049,
+      "left_knee": 7.70913733652474,
+      "right_knee": 2.1396067080482224,
+      "left_ankle": 14.217718757336218,
+      "right_ankle": 5.613496884081609
+    }
+  },
+  {
+    "component": 7,
+    "componentNumber": 7,
+    "componentId": 6,
+    "values": {
+      "left_shoulder": 1.2376192647544335,
+      "right_shoulder": 1.785084647860311,
+      "left_elbow": 2.9577918799227736,
+      "right_elbow": 13.52859374403573,
+      "left_wrist": 33.283269796880234,
+      "right_wrist": 13.835007624566074,
+      "left_hip": 0.1367216547923463,
+      "right_hip": 0.13672165479234633,
+      "left_knee": 4.624682139855589,
+      "right_knee": 5.501552142423715,
+      "left_ankle": 8.833341763410054,
+      "right_ankle": 14.1396136867064
+    }
+  },
+  {
+    "component": 8,
+    "componentNumber": 8,
+    "componentId": 7,
+    "values": {
+      "left_shoulder": 0.8120351997742722,
+      "right_shoulder": 1.8297255019256247,
+      "left_elbow": 3.448369326345699,
+      "right_elbow": 13.719456675770083,
+      "left_wrist": 27.396753325784214,
+      "right_wrist": 12.683098795032334,
+      "left_hip": 0.13663947149428754,
+      "right_hip": 0.13663947149428754,
+      "left_knee": 7.546636270440944,
+      "right_knee": 5.4433590917971,
+      "left_ankle": 11.086776295120995,
+      "right_ankle": 15.760510575020158
+    }
+  },
+  {
+    "component": 9,
+    "componentNumber": 9,
+    "componentId": 8,
+    "values": {
+      "left_shoulder": 2.506081837733145,
+      "right_shoulder": 2.0615935204598235,
+      "left_elbow": 1.3724554058226255,
+      "right_elbow": 1.4256233830468306,
+      "left_wrist": 1.2475731457146468,
+      "right_wrist": 1.2057038533366002,
+      "left_hip": 0.30430243866810197,
+      "right_hip": 0.30430243866810197,
+      "left_knee": 29.0544199843851,
+      "right_knee": 2.0175802438796753,
+      "left_ankle": 56.50648595631443,
+      "right_ankle": 1.993877791970928
+    }
+  }
+]

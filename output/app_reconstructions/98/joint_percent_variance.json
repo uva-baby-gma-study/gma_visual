@@ -1,0 +1,78 @@
+[
+  {
+    "component": 1,
+    "componentNumber": 1,
+    "componentId": 0,
+    "values": {
+      "left_shoulder": 6.1157377859146465,
+      "right_shoulder": 5.68707900376525,
+      "left_elbow": 5.655726574575093,
+      "right_elbow": 12.000541962752571,
+      "left_wrist": 3.114524047076358,
+      "right_wrist": 31.35891007735728,
+      "left_hip": 0.12823429986415366,
+      "right_hip": 0.1282342998641537,
+      "left_knee": 4.808799581679679,
+      "right_knee": 5.484459852778567,
+      "left_ankle": 5.0628239471724985,
+      "right_ankle": 20.45492856719974
+    }
+  },
+  {
+    "component": 2,
+    "componentNumber": 2,
+    "componentId": 1,
+    "values": {
+      "left_shoulder": 2.583058823416529,
+      "right_shoulder": 0.9305108614831814,
+      "left_elbow": 4.93756586545063,
+      "right_elbow": 14.019789887256334,
+      "left_wrist": 3.2499825975303067,
+      "right_wrist": 16.78901702327247,
+      "left_hip": 0.1448608965217743,
+      "right_hip": 0.1448608965217743,
+      "left_knee": 5.204497489185828,
+      "right_knee": 7.197473041005184,
+      "left_ankle": 18.328093628006183,
+      "right_ankle": 26.4702889903498
+    }
+  },
+  {
+    "component": 3,
+    "componentNumber": 3,
+    "componentId": 2,
+    "values": {
+      "left_shoulder": 2.0816244333561142,
+      "right_shoulder": 1.6501832745181715,
+      "left_elbow": 6.799103667254827,
+      "right_elbow": 28.210178323147538,
+      "left_wrist": 7.475692071512078,
+      "right_wrist": 14.675783160388049,
+      "left_hip": 0.26409926817979273,
+      "right_hip": 0.26409926817979273,
+      "left_knee": 6.600608164935648,
+      "right_knee": 2.4979680455675375,
+      "left_ankle": 19.106181014388152,
+      "right_ankle": 10.374479308572313
+    }
+  },
+  {
+    "component": 4,
+    "componentNumber": 4,
+    "componentId": 3,
+    "values": {
+      "left_shoulder": 1.4493554060328784,
+      "right_shoulder": 0.6772143239127046,
+      "left_elbow": 5.668588629637259,
+      "right_elbow": 19.109003278689737,
+      "left_wrist": 17.997535299068417,
+      "right_wrist": 17.700138958626223,
+      "left_hip": 0.2182049730024156,
+      "right_hip": 0.2182049730024156,
+      "left_knee": 3.1508526289836922,
+      "right_knee": 1.380075619448713,
+      "left_ankle": 29.220724960917185,
+      "right_ankle": 3.2101009486783654
+    }
+  }
+]
