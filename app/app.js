@@ -1,8 +1,17 @@
+const welcomePage = document.getElementById("welcomePage");
+const appShell = document.getElementById("appShell");
+const uploadForm = document.getElementById("uploadForm");
+const uploadDropZone = document.getElementById("uploadDropZone");
+const videoFileInput = document.getElementById("videoFileInput");
+const uploadVideoBtn = document.getElementById("uploadVideoBtn");
+const uploadFileName = document.getElementById("uploadFileName");
+const uploadStatus = document.getElementById("uploadStatus");
+const uploadProgress = document.getElementById("uploadProgress");
 const canvas = document.getElementById("viewer");
 const ctx = canvas.getContext("2d");
 const visualizationCanvas = document.getElementById("visualizationCanvas");
 const rightPanel = document.getElementById("rightPanel");
-const layoutEl = document.querySelector(".layout");
+const layoutEl = appShell || document.querySelector(".layout");
 const mainCanvasWrap = document.getElementById("mainCanvasWrap");
 const compareModeView = document.getElementById("compareModeView");
 const compareCurrentViewer = document.getElementById("compareCurrentViewer");
@@ -23,7 +32,6 @@ const normalReferencePrevBtn = document.getElementById("normalReferencePrevBtn")
 const normalReferenceNextBtn = document.getElementById("normalReferenceNextBtn");
 
 const subjectSelect = document.getElementById("subjectSelect");
-const sequenceSelect = document.getElementById("sequenceSelect");
 const frameSlider = document.getElementById("frameSlider");
 const frameLabel = document.getElementById("frameLabel");
 const playBtn = document.getElementById("playBtn");
@@ -55,7 +63,7 @@ let currentFrame = 0;
 let playing = false;
 let visualizationMode = "dynamic";
 let activeVisualization = null;
-let jointVarianceDataPromise = null;
+let jointVariancePromisesBySubject = new Map();
 let jointVarianceBySubject = new Map();
 let metadataBySubject = new Map();
 let componentSequencePromisesBySubject = new Map();
@@ -63,13 +71,18 @@ let componentSequencesBySubject = new Map();
 let currentSubjectMetadata = null;
 let activeSequenceDescriptor = null;
 let visualizationExplanationPromise = null;
-let normalReferenceDataPromise = null;
+let selectedUploadFile = null;
+let viewerStarted = false;
 let normalReferenceOptions = [];
 let selectedNormalReferenceIndex = 0;
+let uploadedSubjectId = "";
 const DEFAULT_VISUALIZATION_CANVAS_HEIGHT = 600;
 const DEFAULT_VIEWER_CANVAS_SIZE = 600;
 const MAX_LINE_PLOT_JOINTS = 6;
 const DEFAULT_SEQUENCE_FILE = "global_reconstruction.json";
+const DEFAULT_UPLOAD_ENDPOINT = "http://127.0.0.1:8000/api/infant-motion/upload";
+const UPLOAD_POLL_INTERVAL_MS = 2500;
+const UPLOAD_MAX_POLL_ATTEMPTS = 120;
 const selectedVisualizationByMode = {
   dynamic: "heatmap",
   static: "heatmap"
@@ -244,6 +257,172 @@ async function fetchJson(url) {
   return await res.json();
 }
 
+function getUploadEndpoint() {
+  return window.__UPLOAD_ENDPOINT__ || DEFAULT_UPLOAD_ENDPOINT;
+}
+
+function setUploadStatus(message, isError = false) {
+  if (!uploadStatus) return;
+  uploadStatus.textContent = message;
+  uploadStatus.classList.toggle("is-error", isError);
+}
+
+function setUploadBusy(isBusy, message = "") {
+  if (uploadVideoBtn) {
+    uploadVideoBtn.disabled = isBusy || !selectedUploadFile;
+    uploadVideoBtn.textContent = isBusy ? "Processing..." : "Upload and Process";
+  }
+  if (videoFileInput) {
+    videoFileInput.disabled = isBusy;
+  }
+  if (uploadProgress) {
+    uploadProgress.classList.toggle("is-working", isBusy);
+  }
+  if (message) {
+    setUploadStatus(message);
+  }
+}
+
+function formatFileSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+  return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function setSelectedUploadFile(file) {
+  selectedUploadFile = file || null;
+  if (uploadFileName) {
+    uploadFileName.textContent = selectedUploadFile
+      ? `${selectedUploadFile.name} (${formatFileSize(selectedUploadFile.size)})`
+      : "No video selected yet.";
+  }
+  if (uploadVideoBtn) {
+    uploadVideoBtn.disabled = !selectedUploadFile;
+  }
+  setUploadStatus(
+    selectedUploadFile
+      ? "Ready to upload. The app will wait for the server to return processed motion data."
+      : "Choose a video to upload for processing."
+  );
+}
+
+function getAbsoluteUrl(url) {
+  if (!url) return "";
+  return new URL(url, window.location.href).toString();
+}
+
+function getUploadSubjectId(payload) {
+  return String(
+    payload?.subjectId ??
+    payload?.subject_id ??
+    payload?.infantId ??
+    payload?.infant_id ??
+    ""
+  );
+}
+
+function getUploadReconBase(payload) {
+  const base =
+    payload?.reconBase ??
+    payload?.reconstructionBase ??
+    payload?.reconstruction_base ??
+    payload?.outputBaseUrl ??
+    payload?.output_base_url ??
+    "";
+  return base ? withTrailingSlash(getAbsoluteUrl(base)) : "";
+}
+
+function getUploadStatusUrl(payload) {
+  const statusUrl = payload?.statusUrl ?? payload?.status_url ?? "";
+  return statusUrl ? getAbsoluteUrl(statusUrl) : "";
+}
+
+function isUploadComplete(payload) {
+  const status = String(payload?.status || "").toLowerCase();
+  return status === "complete" || status === "completed" || status === "ready" || !!getUploadSubjectId(payload);
+}
+
+function isUploadFailed(payload) {
+  const status = String(payload?.status || "").toLowerCase();
+  return status === "failed" || status === "error";
+}
+
+async function waitForUploadResult(initialPayload) {
+  let payload = initialPayload || {};
+  let statusUrl = getUploadStatusUrl(payload);
+
+  if (isUploadComplete(payload) || isUploadFailed(payload) || !statusUrl) {
+    return payload;
+  }
+
+  for (let attempt = 0; attempt < UPLOAD_MAX_POLL_ATTEMPTS; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, UPLOAD_POLL_INTERVAL_MS));
+    setUploadStatus(`Processing video... checking server status (${attempt + 1}/${UPLOAD_MAX_POLL_ATTEMPTS}).`);
+    payload = await fetchJson(statusUrl);
+    statusUrl = getUploadStatusUrl(payload) || statusUrl;
+
+    if (isUploadComplete(payload) || isUploadFailed(payload)) {
+      return payload;
+    }
+  }
+
+  throw new Error("The server is still processing. Please try refreshing the result later.");
+}
+
+async function submitVideoUpload(event) {
+  event?.preventDefault();
+  if (!selectedUploadFile) {
+    setUploadStatus("Please choose a video before uploading.", true);
+    return;
+  }
+
+  setUploadBusy(true, "Uploading video to the processing server...");
+
+  try {
+    const formData = new FormData();
+    formData.append("video", selectedUploadFile);
+
+    const response = await fetch(getUploadEndpoint(), {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}`);
+    }
+
+    const uploadPayload = await response.json();
+    setUploadStatus("Upload complete. Waiting for processed motion data...");
+    const resultPayload = await waitForUploadResult(uploadPayload);
+
+    if (isUploadFailed(resultPayload)) {
+      throw new Error(resultPayload.message || "The server reported that processing failed.");
+    }
+
+    const subjectId = getUploadSubjectId(resultPayload);
+    if (!subjectId) {
+      throw new Error("The server response did not include a subjectId for the processed infant.");
+    }
+
+    const reconBase = getUploadReconBase(resultPayload);
+    await startViewer(subjectId, reconBase);
+  } catch (error) {
+    console.error("Video upload failed:", error);
+    setUploadStatus(
+      `Upload server is not available yet or returned an error: ${error.message}`,
+      true
+    );
+  } finally {
+    setUploadBusy(false);
+  }
+}
+
 async function loadVisualizationExplanations() {
   if (visualizationExplanationPromise) {
     return visualizationExplanationPromise;
@@ -310,19 +489,9 @@ async function resolveReconDir() {
 
   for (const c of candidates) {
     try {
-      const indexUrl = new URL("index.json", c).toString();
-      const manifestSubjects = await fetchJson(indexUrl);
-      if (Array.isArray(manifestSubjects) && manifestSubjects.length > 0) {
-        return { dir: c, subjects: manifestSubjects };
-      }
-    } catch (e) {
-      // keep trying
-    }
-
-    try {
-      const folders = await listSubjectFolders(c);
-      if (folders.length > 0) {
-        return { dir: c, subjects: folders };
+      const subjects = await listSubjectFolders(c);
+      if (subjects.length > 0) {
+        return { dir: c, subjects };
       }
     } catch (e) {
       // keep trying
@@ -331,125 +500,100 @@ async function resolveReconDir() {
 
   throw new Error(
     "Could not load infants. Make sure /output/app_reconstructions/ is reachable " +
-    "and that index.json is present for servers that do not allow folder listing."
+    "and that the server allows folder listing or returns a reconstruction base with folders."
   );
 }
 
-function parseSimpleCsvRow(line) {
-  return line.split(",").map(value => value.trim());
-}
+function normalizeJointVarianceComponents(subjectId, payload) {
+  const rows = Array.isArray(payload) ? payload : (payload?.components || []);
+  const components = rows.map((row, index) => {
+    const componentNumber = Number.parseInt(
+      row.componentNumber ?? row.component ?? index + 1,
+      10
+    );
+    const values = row.values || {};
 
-function parseJointVarianceCsv(csvText) {
-  const lines = csvText
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean);
-
-  if (lines.length < 2) {
-    return new Map();
-  }
-
-  const headers = parseSimpleCsvRow(lines[0]);
-  const valueHeaders = headers.slice(2);
-  const subjectMap = new Map();
-
-  for (let index = 1; index < lines.length; index++) {
-    const values = parseSimpleCsvRow(lines[index]);
-    if (values.length !== headers.length) {
-      continue;
-    }
-
-    const subjectId = values[0];
-    const componentNumber = Number.parseInt(values[1], 10);
-    const jointValues = {};
-
-    valueHeaders.forEach((jointName, jointIndex) => {
-      jointValues[jointName] = Number.parseFloat(values[jointIndex + 2]) || 0;
-    });
-
-    if (!subjectMap.has(subjectId)) {
-      subjectMap.set(subjectId, []);
-    }
-
-    subjectMap.get(subjectId).push({
+    return {
       component: componentNumber,
       componentNumber,
-      componentId: Math.max(0, componentNumber - 1),
-      values: jointValues
-    });
-  }
-
-  subjectMap.forEach(components => {
-    components.sort((a, b) => a.componentId - b.componentId);
+      componentId: Number.isFinite(row.componentId)
+        ? row.componentId
+        : Math.max(0, componentNumber - 1),
+      values
+    };
   });
 
-  return subjectMap;
+  components.sort((a, b) => a.componentId - b.componentId);
+  jointVarianceBySubject.set(String(subjectId), components);
+  return components;
 }
 
-async function ensureJointVarianceData() {
-  if (jointVarianceDataPromise) {
-    return jointVarianceDataPromise;
+async function ensureSubjectJointVarianceData(subjectId) {
+  const normalizedSubjectId = String(subjectId || "");
+  if (!normalizedSubjectId) {
+    return [];
+  }
+
+  if (jointVarianceBySubject.has(normalizedSubjectId)) {
+    return jointVarianceBySubject.get(normalizedSubjectId);
+  }
+
+  if (jointVariancePromisesBySubject.has(normalizedSubjectId)) {
+    return jointVariancePromisesBySubject.get(normalizedSubjectId);
   }
 
   const base = window.__RECON_BASE__;
   if (!base) {
-    return jointVarianceBySubject;
+    return [];
   }
 
-  jointVarianceDataPromise = (async () => {
+  const promise = (async () => {
     try {
       const url = new URL(
-        "all_subjects_body_joint_percent_variance.csv",
+        `${normalizedSubjectId}/joint_percent_variance.json`,
         base
       ).toString();
-      const csvText = await fetchText(url);
-      jointVarianceBySubject = parseJointVarianceCsv(csvText);
-      return jointVarianceBySubject;
+      const payload = await fetchJson(url);
+      return normalizeJointVarianceComponents(normalizedSubjectId, payload);
     } catch (error) {
-      jointVarianceDataPromise = null;
+      jointVariancePromisesBySubject.delete(normalizedSubjectId);
       throw error;
     }
   })();
 
-  return jointVarianceDataPromise;
+  jointVariancePromisesBySubject.set(normalizedSubjectId, promise);
+  return promise;
 }
 
-async function ensureNormalReferenceOptions() {
-  if (normalReferenceDataPromise) {
-    return normalReferenceDataPromise;
+async function getSubjectVarianceOrMetadataComponents(subjectId) {
+  try {
+    const components = await ensureSubjectJointVarianceData(subjectId);
+    return components.length > 0
+      ? components
+      : getSubjectComponentDefinitions(subjectId);
+  } catch (error) {
+    console.warn(`No joint variance JSON found for infant ${subjectId}; using metadata fallback.`, error);
+    return getSubjectComponentDefinitions(subjectId);
   }
+}
 
-  const base = window.__RECON_BASE__;
-  if (!base) {
-    normalReferenceOptions = [];
-    return normalReferenceOptions;
-  }
+function setNormalReferenceOptionsFromSubjects(subjects, currentSubject) {
+  const currentSubjectId = String(currentSubject || "");
+  normalReferenceOptions = subjects
+    .map(subject => String(subject))
+    .filter(subject => subject && subject !== currentSubjectId)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    .map((subjectId, index) => ({
+      subjectId,
+      label: String(index + 1)
+    }));
 
-  normalReferenceDataPromise = (async () => {
-    try {
-      const url = new URL("normal_index.json", base).toString();
-      const rows = await fetchJson(url);
-      normalReferenceOptions = Array.isArray(rows)
-        ? rows
-            .map((row, index) => ({
-              subjectId: String(row.subjectId ?? row.subject_id ?? ""),
-              label: String(row.label ?? index + 1)
-            }))
-            .filter(row => row.subjectId)
-        : [];
-      selectedNormalReferenceIndex = Math.min(
-        selectedNormalReferenceIndex,
-        Math.max(0, normalReferenceOptions.length - 1)
-      );
-      return normalReferenceOptions;
-    } catch (error) {
-      console.warn("No normal reference index found:", error);
-      normalReferenceOptions = [];
-      return normalReferenceOptions;
-    }
-  })();
+  selectedNormalReferenceIndex = Math.min(
+    selectedNormalReferenceIndex,
+    Math.max(0, normalReferenceOptions.length - 1)
+  );
 
-  return normalReferenceDataPromise;
+  return normalReferenceOptions;
 }
 
 async function ensureSubjectMetadata(subject) {
@@ -506,11 +650,10 @@ async function syncVarianceVisualizationData() {
   }
 
   try {
-    const varianceData = await ensureJointVarianceData();
+    const components = await ensureSubjectJointVarianceData(subjectId);
     if (activeVisualization !== view) {
       return;
     }
-    const components = varianceData.get(subjectId) || [];
     updateVisualizationCanvasLayout(components);
     view.setVarianceData(subjectId, components);
     if (typeof view.setSelectedComponent === "function") {
@@ -750,10 +893,6 @@ function updateSourceControls() {
   const componentMode = isComponentVarianceActive();
   const subject = getCurrentSubject();
   const components = currentSubjectMetadata?.components || [];
-
-  if (sequenceSelect) {
-    sequenceSelect.disabled = componentMode;
-  }
 
   const preferredId = getSelectedComponentId(subject);
   const fallbackId = components[0] ? String(components[0].id) : "";
@@ -1614,26 +1753,67 @@ document.addEventListener("keydown", event => {
 });
 
 // --------- Data loading ----------
-async function loadSubjects() {
+async function handleSubjectSelection(subject) {
+  currentSubjectMetadata = null;
+  updateSourceControls();
+
+  if (!subject) {
+    if (comparisonState.active) {
+      exitComparisonMode();
+    }
+    return;
+  }
+
+  await loadMetadata(subject);
+  await loadCurrentSequenceSource();
+}
+
+async function loadSubjects(preferredSubject = "") {
   statusEl.textContent = "Loading infants…";
 
   try {
-    const { dir, subjects } = await resolveReconDir();
+    let dir = window.__RECON_BASE__ || "";
+    let subjects = [];
+
+    if (dir) {
+      dir = withTrailingSlash(dir);
+      subjects = await listSubjectFolders(dir);
+    } else {
+      const resolved = await resolveReconDir();
+      dir = resolved.dir;
+      subjects = resolved.subjects;
+    }
+
     window.__RECON_BASE__ = dir;
-    await ensureNormalReferenceOptions();
+    const subjectIds = subjects.map(subject => String(subject)).filter(Boolean);
+    const preferredSubjectId =
+      String(preferredSubject || uploadedSubjectId || subjectSelect?.value || "") ||
+      (subjectIds.includes("51") ? "51" : subjectIds[0] || "");
+
+    uploadedSubjectId = preferredSubjectId;
+    if (preferredSubjectId && !subjectIds.includes(preferredSubjectId)) {
+      subjectIds.push(preferredSubjectId);
+    }
+
+    setNormalReferenceOptionsFromSubjects(subjectIds, preferredSubjectId);
     updateNormalReferenceControls();
 
-    const visibleSubjects = subjects.filter(subject => !isNormalReferenceSubject(subject));
-
     subjectSelect.innerHTML = `<option value="">-- Select Infant --</option>`;
-    visibleSubjects.sort().forEach(s => {
+    if (preferredSubjectId) {
       const opt = document.createElement("option");
-      opt.value = s;
-      opt.textContent = s;
+      opt.value = preferredSubjectId;
+      opt.textContent = preferredSubjectId;
       subjectSelect.appendChild(opt);
-    });
+    }
 
-    statusEl.textContent = `Found ${visibleSubjects.length} infants.`;
+    statusEl.textContent =
+      `Loaded infant ${preferredSubjectId || "unknown"} with ${normalReferenceOptions.length} normal references.`;
+    if (preferredSubjectId) {
+      subjectSelect.value = preferredSubjectId;
+      if (subjectSelect.value === preferredSubjectId) {
+        await handleSubjectSelection(preferredSubjectId);
+      }
+    }
   } catch (err) {
     console.error(err);
     subjectSelect.innerHTML = `<option value="">(no infants found)</option>`;
@@ -1682,8 +1862,8 @@ async function loadSequenceSource(subject, descriptor) {
 function getDefaultSequenceDescriptor() {
   return {
     type: "sequence",
-    path: sequenceSelect?.value || DEFAULT_SEQUENCE_FILE,
-    label: sequenceSelect?.selectedOptions?.[0]?.textContent || "Sequence"
+    path: DEFAULT_SEQUENCE_FILE,
+    label: "Global Reconstruction"
   };
 }
 
@@ -1891,8 +2071,12 @@ async function syncVisualizationInstanceData(view, subject) {
   }
 
   if (typeof view.setVarianceData === "function") {
-    const varianceData = await ensureJointVarianceData();
-    const components = varianceData.get(subject) || [];
+    let components = [];
+    try {
+      components = await ensureSubjectJointVarianceData(subject);
+    } catch (error) {
+      console.warn(`No joint variance JSON found for infant ${subject}.`, error);
+    }
     view.setVarianceData(subject, components);
     if (typeof view.setSelectedComponent === "function") {
       view.setSelectedComponent(getSelectedComponentId(subject));
@@ -2113,13 +2297,14 @@ async function refreshComparisonMode() {
     comparisonState.current.sequenceData = currentSequence;
     comparisonState.normal.sequenceData = normalSequence;
 
-    const varianceData = await ensureJointVarianceData();
-    const currentComponents = activeDef?.id === "componentvariance"
-      ? (varianceData.get(currentSubject) || getSubjectComponentDefinitions(currentSubject))
-      : null;
-    const normalComponents = activeDef?.id === "componentvariance"
-      ? (varianceData.get(normalSubject) || getSubjectComponentDefinitions(normalSubject))
-      : null;
+    let currentComponents = null;
+    let normalComponents = null;
+    if (activeDef?.id === "componentvariance") {
+      [currentComponents, normalComponents] = await Promise.all([
+        getSubjectVarianceOrMetadataComponents(currentSubject),
+        getSubjectVarianceOrMetadataComponents(normalSubject)
+      ]);
+    }
 
     updateCompareCanvasLayouts(currentComponents, normalComponents);
     updateComparisonTitles();
@@ -2276,29 +2461,7 @@ frameSlider.oninput = () => {
 };
 
 subjectSelect.onchange = async () => {
-  const subject = subjectSelect.value;
-  sequenceSelect.innerHTML = `
-    <option value="global_reconstruction.json">Global Reconstruction</option>
-    <option value="ground_truth.json">Ground Truth</option>
-  `;
-  currentSubjectMetadata = null;
-  updateSourceControls();
-
-  if (!subject) {
-    if (comparisonState.active) {
-      exitComparisonMode();
-    }
-    return;
-  }
-
-  await loadMetadata(subject);
-  await loadCurrentSequenceSource();
-};
-
-sequenceSelect.onchange = async () => {
-  const subject = subjectSelect.value;
-  if (!subject) return;
-  await loadCurrentSequenceSource();
+  await handleSubjectSelection(subjectSelect.value);
 };
 
 const zoomSlider = document.getElementById("zoomSlider");
@@ -2332,14 +2495,102 @@ if (visualizationCanvas) {
   });
 }
 
+if (uploadForm) {
+  uploadForm.addEventListener("submit", event => {
+    submitVideoUpload(event).catch(error => {
+      console.error("Failed to submit upload:", error);
+      setUploadStatus(`Upload failed: ${error.message}`, true);
+      setUploadBusy(false);
+    });
+  });
+}
+
+if (videoFileInput) {
+  videoFileInput.addEventListener("change", () => {
+    setSelectedUploadFile(videoFileInput.files?.[0] || null);
+  });
+}
+
+if (uploadDropZone) {
+  ["dragenter", "dragover"].forEach(eventName => {
+    uploadDropZone.addEventListener(eventName, event => {
+      event.preventDefault();
+      uploadDropZone.classList.add("is-dragging");
+    });
+  });
+
+  ["dragleave", "drop"].forEach(eventName => {
+    uploadDropZone.addEventListener(eventName, event => {
+      event.preventDefault();
+      uploadDropZone.classList.remove("is-dragging");
+    });
+  });
+
+  uploadDropZone.addEventListener("drop", event => {
+    const file = Array.from(event.dataTransfer?.files || [])
+      .find(candidate => candidate.type.startsWith("video/"));
+    if (!file) {
+      setUploadStatus("Please drop a video file.", true);
+      return;
+    }
+    if (videoFileInput) {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      videoFileInput.files = dataTransfer.files;
+    }
+    setSelectedUploadFile(file);
+  });
+}
+
+function getInitialViewerSubject() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("subject") || params.get("infant") || "";
+}
+
+async function startViewer(preferredSubject = "", reconBase = "") {
+  const normalizedReconBase = reconBase ? withTrailingSlash(getAbsoluteUrl(reconBase)) : "";
+
+  if (normalizedReconBase) {
+    window.__RECON_BASE__ = normalizedReconBase;
+    normalReferenceOptions = [];
+    selectedNormalReferenceIndex = 0;
+  }
+
+  if (preferredSubject) {
+    uploadedSubjectId = String(preferredSubject);
+  }
+
+  if (welcomePage) {
+    welcomePage.hidden = true;
+  }
+  if (appShell) {
+    appShell.hidden = false;
+  }
+
+  if (!viewerStarted) {
+    viewerStarted = true;
+    window.addEventListener("resize", handleCanvasResize);
+    await loadVisualizationExplanations();
+    createVisualization();
+    syncAllCanvasLayouts();
+    updateRangeFill(frameSlider);
+    updateRangeFill(zoomSlider);
+    updateRangeFill(speedSlider);
+    updateControlValueLabels();
+    updateCompareButtonVisibility();
+  }
+
+  await loadSubjects(preferredSubject);
+}
+
 // --------- Startup ----------
-window.addEventListener("resize", handleCanvasResize);
+setSelectedUploadFile(null);
 loadVisualizationExplanations();
-createVisualization();
-syncAllCanvasLayouts();
-updateRangeFill(frameSlider);
-updateRangeFill(zoomSlider);
-updateRangeFill(speedSlider);
-updateControlValueLabels();
-updateCompareButtonVisibility();
-loadSubjects();
+
+const initialViewerSubject = getInitialViewerSubject();
+if (initialViewerSubject || new URLSearchParams(window.location.search).get("viewer") === "1") {
+  startViewer(initialViewerSubject).catch(error => {
+    console.error("Failed to start viewer:", error);
+    setUploadStatus(`Could not open viewer: ${error.message}`, true);
+  });
+}
