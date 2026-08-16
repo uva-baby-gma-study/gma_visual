@@ -45,6 +45,10 @@ const jointSelectionList = document.getElementById("jointSelectionList");
 const clearJointSelectionBtn = document.getElementById("clearJointSelectionBtn");
 const zoomValueLabel = document.getElementById("zoomValueLabel");
 const speedValueLabel = document.getElementById("speedValueLabel");
+const surveyPanel = document.getElementById("surveyPanel");
+const surveyHeader = document.getElementById("surveyHeader");
+const surveyMinimizeBtn = document.getElementById("surveyMinimizeBtn");
+const surveyExpandBtn = document.getElementById("surveyExpandBtn");
 
 const statusEl = document.getElementById("status");
 const metaBox = document.getElementById("metaBox");
@@ -102,23 +106,37 @@ const joints = [
   "left_knee","right_knee","left_ankle","right_ankle"
 ];
 
-// For right-panel visualizations: remove nose, eyes, and ears
+// For most right-panel visualizations: remove face landmarks and hips.
 const visualizationJointNames = joints.filter(
+  j => ![
+    "nose",
+    "left_eye",
+    "right_eye",
+    "left_ear",
+    "right_ear",
+    "left_hip",
+    "right_hip"
+  ].includes(j)
+);
+
+// Component variance still shows hips because those values are part of the pattern summary.
+const componentVarianceJointNames = joints.filter(
   j => !["nose", "left_eye", "right_eye", "left_ear", "right_ear"].includes(j)
 );
+const defaultTraceJointNames = ["left_wrist", "right_wrist"];
 const selectedJointsByVisualization = {
   dynamic: {
     heatmap: visualizationJointNames.slice(),
-    lineplot: visualizationJointNames.slice(0, MAX_LINE_PLOT_JOINTS),
-    stackedlineplot: visualizationJointNames.slice(0, MAX_LINE_PLOT_JOINTS),
-    episodes: visualizationJointNames.slice(0, MAX_LINE_PLOT_JOINTS),
+    lineplot: defaultTraceJointNames.slice(),
+    stackedlineplot: defaultTraceJointNames.slice(),
+    episodes: defaultTraceJointNames.slice(),
     componentvariance: []
   },
   static: {
     heatmap: visualizationJointNames.slice(),
-    lineplot: visualizationJointNames.slice(0, MAX_LINE_PLOT_JOINTS),
-    stackedlineplot: visualizationJointNames.slice(0, MAX_LINE_PLOT_JOINTS),
-    episodes: visualizationJointNames.slice(0, MAX_LINE_PLOT_JOINTS),
+    lineplot: defaultTraceJointNames.slice(),
+    stackedlineplot: defaultTraceJointNames.slice(),
+    episodes: defaultTraceJointNames.slice(),
     componentvariance: []
   }
 };
@@ -804,7 +822,9 @@ function buildVisualizationSequence(fullSequenceData) {
     "left_eye",
     "right_eye",
     "left_ear",
-    "right_ear"
+    "right_ear",
+    "left_hip",
+    "right_hip"
   ]);
 
   const reduced = [];
@@ -817,6 +837,12 @@ function buildVisualizationSequence(fullSequenceData) {
   }
 
   return reduced;
+}
+
+function getJointNamesForVisualization(def) {
+  return def?.id === "componentvariance"
+    ? componentVarianceJointNames
+    : visualizationJointNames;
 }
 
 function updateVisualizationButtons() {
@@ -890,6 +916,170 @@ function updateControlValueLabels() {
     const speedMultiplier = parseFloat(speedSlider.value);
     speedValueLabel.textContent = formatMultiplierLabel(speedMultiplier);
   }
+}
+
+function clampSurveyPanelToViewport() {
+  if (!surveyPanel) return;
+
+  if (surveyPanel.classList.contains("is-minimized")) {
+    placeSurveyPanelBottomRight();
+    return;
+  }
+
+  const rect = surveyPanel.getBoundingClientRect();
+  const margin = 12;
+  const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin);
+  const maxTop = Math.max(margin, window.innerHeight - rect.height - margin);
+  const left = Math.min(Math.max(rect.left, margin), maxLeft);
+  const top = Math.min(Math.max(rect.top, margin), maxTop);
+
+  surveyPanel.style.left = `${left}px`;
+  surveyPanel.style.top = `${top}px`;
+  surveyPanel.style.right = "auto";
+  surveyPanel.style.bottom = "auto";
+}
+
+function afterSurveyPanelResize(callback) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      callback();
+      window.setTimeout(callback, 220);
+    });
+  });
+}
+
+function placeSurveyPanelBottomRight() {
+  if (!surveyPanel) return;
+
+  surveyPanel.style.left = "auto";
+  surveyPanel.style.top = "auto";
+  surveyPanel.style.right = "12px";
+  surveyPanel.style.bottom = "12px";
+}
+
+function placeSurveyPanelCentered() {
+  if (!surveyPanel) return;
+
+  const rect = surveyPanel.getBoundingClientRect();
+  const left = Math.max(12, (window.innerWidth - rect.width) / 2);
+  const top = Math.max(12, (window.innerHeight - rect.height) / 2);
+
+  surveyPanel.style.left = `${left}px`;
+  surveyPanel.style.top = `${top}px`;
+  surveyPanel.style.right = "auto";
+  surveyPanel.style.bottom = "auto";
+  clampSurveyPanelToViewport();
+}
+
+function setSurveyMinimized(isMinimized) {
+  if (!surveyPanel || !surveyMinimizeBtn) return;
+
+  if (isMinimized) {
+    surveyPanel.classList.remove("is-expanded");
+    if (surveyExpandBtn) {
+      surveyExpandBtn.textContent = "↗";
+      surveyExpandBtn.setAttribute("aria-label", "Enlarge survey");
+    }
+  }
+  surveyPanel.classList.toggle("is-minimized", isMinimized);
+  surveyMinimizeBtn.textContent = isMinimized ? "+" : "−";
+  surveyMinimizeBtn.setAttribute(
+    "aria-label",
+    isMinimized ? "Restore survey" : "Minimize survey"
+  );
+  afterSurveyPanelResize(() => {
+    if (isMinimized) {
+      placeSurveyPanelBottomRight();
+    } else {
+      clampSurveyPanelToViewport();
+    }
+  });
+}
+
+function setSurveyExpanded(isExpanded) {
+  if (!surveyPanel || !surveyExpandBtn) return;
+
+  if (isExpanded && surveyPanel.classList.contains("is-minimized")) {
+    surveyPanel.classList.remove("is-minimized");
+    if (surveyMinimizeBtn) {
+      surveyMinimizeBtn.textContent = "−";
+      surveyMinimizeBtn.setAttribute("aria-label", "Minimize survey");
+    }
+  }
+  surveyPanel.classList.toggle("is-expanded", isExpanded);
+  surveyExpandBtn.textContent = isExpanded ? "↘" : "↗";
+  surveyExpandBtn.setAttribute(
+    "aria-label",
+    isExpanded ? "Shrink survey" : "Enlarge survey"
+  );
+  afterSurveyPanelResize(() => {
+    if (isExpanded) {
+      placeSurveyPanelCentered();
+    } else {
+      clampSurveyPanelToViewport();
+    }
+  });
+}
+
+function initSurveyPanelControls() {
+  if (!surveyPanel || !surveyHeader) return;
+
+  if (surveyMinimizeBtn) {
+    surveyMinimizeBtn.onclick = () => {
+      setSurveyMinimized(!surveyPanel.classList.contains("is-minimized"));
+    };
+  }
+
+  if (surveyExpandBtn) {
+    surveyExpandBtn.onclick = () => {
+      setSurveyExpanded(!surveyPanel.classList.contains("is-expanded"));
+    };
+  }
+
+  let dragState = null;
+
+  surveyHeader.addEventListener("pointerdown", event => {
+    if (event.target.closest?.("button, a")) return;
+
+    const rect = surveyPanel.getBoundingClientRect();
+    dragState = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top
+    };
+
+    surveyPanel.style.left = `${rect.left}px`;
+    surveyPanel.style.top = `${rect.top}px`;
+    surveyPanel.style.right = "auto";
+    surveyPanel.style.bottom = "auto";
+    surveyHeader.setPointerCapture(event.pointerId);
+  });
+
+  surveyHeader.addEventListener("pointermove", event => {
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    const rect = surveyPanel.getBoundingClientRect();
+    const margin = 12;
+    const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin);
+    const maxTop = Math.max(margin, window.innerHeight - rect.height - margin);
+    const left = Math.min(Math.max(event.clientX - dragState.offsetX, margin), maxLeft);
+    const top = Math.min(Math.max(event.clientY - dragState.offsetY, margin), maxTop);
+
+    surveyPanel.style.left = `${left}px`;
+    surveyPanel.style.top = `${top}px`;
+  });
+
+  surveyHeader.addEventListener("pointerup", event => {
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+    dragState = null;
+    surveyHeader.releasePointerCapture(event.pointerId);
+    clampSurveyPanelToViewport();
+  });
+
+  surveyHeader.addEventListener("pointercancel", () => {
+    dragState = null;
+    clampSurveyPanelToViewport();
+  });
 }
 
 function getPreferredVisualizationCanvasHeight(componentData = null, targetCanvas = null) {
@@ -1434,7 +1624,7 @@ function createVisualization() {
 
   activeVisualization = new ViewClass(
     visualizationCanvas,
-    visualizationJointNames
+    getJointNamesForVisualization(activeDef)
   );
 
   syncAllCanvasLayouts();
@@ -1454,6 +1644,9 @@ function createVisualization() {
   }
 
   if (sequenceData) {
+    if (typeof activeVisualization.setFullSequence === "function") {
+      activeVisualization.setFullSequence(sequenceData);
+    }
     activeVisualization.setSequence(buildVisualizationSequence(sequenceData));
     activeVisualization.setFrame(currentFrame);
   } else {
@@ -1692,6 +1885,9 @@ async function loadSequenceSource(subject, descriptor) {
   statusEl.textContent = `Loaded ${descriptorLabel} (${T} frames).`;
 
   if (activeVisualization) {
+    if (typeof activeVisualization.setFullSequence === "function") {
+      activeVisualization.setFullSequence(sequenceData);
+    }
     activeVisualization.setSequence(buildVisualizationSequence(sequenceData));
   }
 
@@ -1916,7 +2112,7 @@ async function buildComparisonVisualization(targetCanvas, subject, sequence, com
     return null;
   }
 
-  const view = new ViewClass(targetCanvas, visualizationJointNames);
+  const view = new ViewClass(targetCanvas, getJointNamesForVisualization(activeDef));
 
   if (
     activeDef.supportsJointSelection &&
@@ -1933,6 +2129,9 @@ async function buildComparisonVisualization(targetCanvas, subject, sequence, com
   }
 
   if (sequence) {
+    if (typeof view.setFullSequence === "function") {
+      view.setFullSequence(sequence);
+    }
     view.setSequence(buildVisualizationSequence(sequence));
   } else if (typeof view.draw === "function") {
     view.draw();
@@ -2307,7 +2506,11 @@ if (visualizationCanvas) {
 }
 
 // --------- Startup ----------
-window.addEventListener("resize", handleCanvasResize);
+window.addEventListener("resize", () => {
+  handleCanvasResize();
+  clampSurveyPanelToViewport();
+});
+initSurveyPanelControls();
 loadVisualizationExplanations();
 createVisualization();
 syncAllCanvasLayouts();

@@ -17,8 +17,15 @@ class DynamicMovementHeatmap {
       ["right_hip", "right_knee"],
       ["right_knee", "right_ankle"]
     ];
+    this.fullJointNames = [
+      "nose", "left_eye", "right_eye", "left_ear", "right_ear",
+      "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
+      "left_wrist", "right_wrist", "left_hip", "right_hip",
+      "left_knee", "right_knee", "left_ankle", "right_ankle"
+    ];
 
     this.sequenceData = null;
+    this.fullSequenceData = null;
     this.currentFrame = 0;
     this.selectedJointNames = jointNames.slice();
 
@@ -41,6 +48,10 @@ class DynamicMovementHeatmap {
     this.currentFrame = 0;
     this.precomputeAllFrames();
     this.draw();
+  }
+
+  setFullSequence(sequenceData) {
+    this.fullSequenceData = sequenceData;
   }
 
   setFrame(frame) {
@@ -193,26 +204,15 @@ class DynamicMovementHeatmap {
   colorMap(v) {
     const t = Math.max(0, Math.min(1, v));
 
-    let r;
-    let g;
-    let b;
-
-    if (t < 0.33) {
-      const u = t / 0.33;
-      r = 0;
-      g = Math.round(255 * u);
-      b = Math.round(255 * (1 - u));
-    } else if (t < 0.66) {
-      const u = (t - 0.33) / 0.33;
-      r = Math.round(255 * u);
-      g = 255;
-      b = 0;
-    } else {
-      const u = (t - 0.66) / 0.34;
-      r = 255;
-      g = Math.round(255 * (1 - u));
-      b = 0;
-    }
+    const low = { r: 34, g: 197, b: 94 };
+    const mid = { r: 250, g: 204, b: 21 };
+    const high = { r: 239, g: 68, b: 68 };
+    const from = t < 0.5 ? low : mid;
+    const to = t < 0.5 ? mid : high;
+    const u = t < 0.5 ? t / 0.5 : (t - 0.5) / 0.5;
+    const r = Math.round(from.r + (to.r - from.r) * u);
+    const g = Math.round(from.g + (to.g - from.g) * u);
+    const b = Math.round(from.b + (to.b - from.b) * u);
 
     return [r, g, b];
   }
@@ -233,25 +233,38 @@ class DynamicMovementHeatmap {
     const gh = 10;
 
     const grad = ctx.createLinearGradient(gx, 0, gx + gw, 0);
-    grad.addColorStop(0.0, "blue");
-    grad.addColorStop(0.33, "green");
-    grad.addColorStop(0.66, "yellow");
-    grad.addColorStop(1.0, "red");
+    grad.addColorStop(0.0, "rgb(34, 197, 94)");
+    grad.addColorStop(0.5, "rgb(250, 204, 21)");
+    grad.addColorStop(1.0, "rgb(239, 68, 68)");
 
     ctx.fillStyle = grad;
     ctx.fillRect(gx, gy, gw, gh);
 
     ctx.fillStyle = "#ffffff";
     ctx.font = '12px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText("low", gx, gy + 22);
-    ctx.fillText("high", gx + gw - 22, gy + 22);
+    ctx.fillText("low risk", gx, gy + 22);
+    ctx.fillText("high risk", gx + gw - 45, gy + 22);
   }
 
   getJointPositionMap(frame) {
     const positions = new Map();
+    const sequence = this.fullSequenceData || this.sequenceData;
+    const sourceJointNames = this.fullSequenceData ? this.fullJointNames : this.jointNames;
 
-    this.jointNames.forEach((jointName, index) => {
-      positions.set(jointName, this.getJointScreenPosition(index, frame));
+    sourceJointNames.forEach((jointName, index) => {
+      const xSeries = sequence?.[2 * index];
+      const ySeries = sequence?.[2 * index + 1];
+      if (!xSeries || !ySeries) return;
+
+      const cx = this.canvas.width / 2;
+      const cy = this.canvas.height / 2;
+      const x = xSeries[frame];
+      const y = ySeries[frame];
+
+      positions.set(jointName, {
+        x: cx + x * this.scale,
+        y: cy + y * this.scale
+      });
     });
 
     return positions;

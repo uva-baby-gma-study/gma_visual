@@ -3,7 +3,7 @@
     "heatmap": {
       "title": "Dynamic Heatmap",
       "description": [
-        "This view shows where movement has accumulated up to the current frame. Brighter, warmer areas indicate regions where more movement has occurred. Use this view to observe how movement builds over time and whether certain body regions are repeatedly active."
+        "This view shows where movement has accumulated up to the current frame. Green areas indicate lower-risk movement density, yellow areas are in the middle, and red areas indicate higher-risk movement density. Use this view to observe how movement builds over time and whether certain body regions are repeatedly active."
       ],
       "compareWithNormal": [
         "Compared with normal infant movement, infants with cramped-synchronized movements may show more rigid and repetitive heatmap patterns, with multiple joints becoming active together rather than moving in a relaxed, spontaneous, and varied way."
@@ -30,10 +30,10 @@
     "episodes": {
       "title": "Dynamic Movement Episodes",
       "description": [
-        "This view represents only detected strong movement episodes as bars for each selected joint up to the current frame. Wider bars indicate longer movement episodes, while taller and brighter bars indicate stronger movement. The episodes are redetermined using a threshold that updates as the video progresses, using only the movement up to the current frame. As more frames become available, a bar may appear, disappear, return, or merge with nearby bars. Choose Speed to detect episodes when the joint is moving strongly from frame to frame. Choose Acceleration to detect episodes when the movement changes suddenly. Compare the bars to see which joints have stronger, longer, or more frequent movement episodes, and whether multiple joints become active at similar times."
+        "This view represents only detected strong movement episodes as bars for each selected joint up to the current frame. Wider bars indicate longer movement episodes, while taller bars indicate stronger movement. The episodes are redetermined using a threshold that updates as the video progresses, using only the movement up to the current frame. As more frames become available, a bar may appear, disappear, return, or merge with nearby bars. Choose Speed to detect episodes when the joint is moving strongly from frame to frame. Choose Acceleration to detect episodes when the movement changes suddenly. Compare the bars to see which joints have stronger, longer, or more frequent movement episodes, and whether multiple joints become active at similar times."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In this view, bars for several joints may appear and disappear at similar times, with similar widths, heights, and brightness levels."
+        "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In this view, bars for several joints may appear and disappear at similar times, with similar widths and heights."
       ]
     },
     "componentvariance": {
@@ -52,7 +52,7 @@
     "heatmap": {
       "title": "Static Heatmap",
       "description": [
-        "This view shows the total movement accumulated across the full sequence for each selected joint. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. Bluer areas indicate less accumulated movement, while yellower areas indicate more accumulated movement. Use this view to compare when movement starts to build and which joints show the greatest overall activity."
+        "This view shows the total movement accumulated across the full sequence for each selected joint. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. Green areas indicate lower-risk accumulated movement, yellow areas are in the middle, and red areas indicate higher-risk accumulated movement. Use this view to compare when movement starts to build and which joints show the greatest overall activity."
       ],
       "compareWithNormal": [
         "Compared with normal infant movement, infants with cramped-synchronized movements may show a more gradual and aligned buildup of movement across joints, suggesting that multiple joints are becoming active in a more synchronized pattern."
@@ -79,10 +79,10 @@
     "episodes": {
       "title": "Static Movement Episodes",
       "description": [
-        "This view represents only detected strong movement episodes as bars for each selected joint across the full sequence. Wider bars indicate longer movement episodes, while taller and brighter bars indicate stronger movement. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. The episodes are determined after seeing the entire recording, so this view shows the strongest movement episodes across the full sequence. Choose Speed to detect episodes when the joint is moving strongly from frame to frame. Choose Acceleration to detect episodes when the movement changes suddenly. Compare the bars to see which joints have stronger, longer, or more frequent movement episodes, and whether multiple joints become active at similar times."
+        "This view represents only detected strong movement episodes as bars for each selected joint across the full sequence. Wider bars indicate longer movement episodes, while taller bars indicate stronger movement. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. The episodes are determined after seeing the entire recording, so this view shows the strongest movement episodes across the full sequence. Choose Speed to detect episodes when the joint is moving strongly from frame to frame. Choose Acceleration to detect episodes when the movement changes suddenly. Compare the bars to see which joints have stronger, longer, or more frequent movement episodes, and whether multiple joints become active at similar times."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In this view, bars for several joints may occur during similar time periods, with similar widths, heights, and brightness levels."
+        "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In this view, bars for several joints may occur during similar time periods, with similar widths and heights."
       ]
     },
     "componentvariance": {

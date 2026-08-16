@@ -209,20 +209,14 @@ class DynamicEpisodePlot {
         plotHeight * (0.16 + 0.78 * visualIntensity)
       );
       const rawY = plotTop + plotHeight - rawBarHeight - plotHeight * 0.08;
-      const alpha = 0.16 + 0.8 * visualIntensity;
       const barX = Math.round(x);
       const barY = Math.round(rawY);
       const barWidth = Math.max(4, Math.round(widthPx));
       const barHeight = Math.max(3, Math.round(rawBarHeight));
-      const fillAlpha = 0.2 + 0.78 * visualIntensity;
-      const borderAlpha = 0.12 + 0.34 * visualIntensity;
-      const glowAlpha = 0.03 + 0.12 * visualIntensity;
 
-      ctx.fillStyle = color.replace("hsl(", "hsla(").replace(")", `, ${fillAlpha})`);
+      ctx.fillStyle = color.replace("hsl(", "hsla(").replace(")", ", 0.82)");
       ctx.fillRect(barX, barY, barWidth, barHeight);
-      ctx.fillStyle = `rgba(255,255,255,${glowAlpha})`;
-      ctx.fillRect(barX, barY, barWidth, barHeight);
-      ctx.strokeStyle = `rgba(255,255,255,${borderAlpha})`;
+      ctx.strokeStyle = "rgba(255,255,255,0.2)";
       ctx.strokeRect(barX + 0.5, barY + 0.5, Math.max(1, barWidth - 1), Math.max(1, barHeight - 1));
     });
   }

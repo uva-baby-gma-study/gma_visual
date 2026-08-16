@@ -108,9 +108,15 @@ class StaticHeatmap {
   getColor(value) {
     const normalized = Math.max(0, Math.min(1, value / this.maxMovement));
     const eased = Math.pow(normalized, 0.82);
-    const r = Math.floor(28 + 227 * eased);
-    const g = Math.floor(68 + 170 * Math.min(1, eased * 1.05));
-    const b = Math.floor(118 + 120 * (1 - eased));
+    const low = { r: 34, g: 197, b: 94 };
+    const mid = { r: 250, g: 204, b: 21 };
+    const high = { r: 239, g: 68, b: 68 };
+    const from = eased < 0.5 ? low : mid;
+    const to = eased < 0.5 ? mid : high;
+    const t = eased < 0.5 ? eased / 0.5 : (eased - 0.5) / 0.5;
+    const r = Math.round(from.r + (to.r - from.r) * t);
+    const g = Math.round(from.g + (to.g - from.g) * t);
+    const b = Math.round(from.b + (to.b - from.b) * t);
     return `rgb(${r}, ${g}, ${b})`;
   }
 
@@ -123,9 +129,9 @@ class StaticHeatmap {
     const y = panelY + 4;
 
     const gradient = ctx.createLinearGradient(x, 0, x + barWidth, 0);
-    gradient.addColorStop(0, "rgb(28, 68, 238)");
-    gradient.addColorStop(0.5, "rgb(80, 196, 213)");
-    gradient.addColorStop(1, "rgb(255, 208, 72)");
+    gradient.addColorStop(0, "rgb(34, 197, 94)");
+    gradient.addColorStop(0.5, "rgb(250, 204, 21)");
+    gradient.addColorStop(1, "rgb(239, 68, 68)");
 
     ctx.fillStyle = gradient;
     ctx.fillRect(x, y, barWidth, barHeight);
@@ -135,8 +141,8 @@ class StaticHeatmap {
 
     ctx.font = `${compact ? 11 : 12}px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif`;
     ctx.fillStyle = "#9fb0c3";
-    ctx.fillText("lower", x, y + 22);
-    ctx.fillText("higher", x + barWidth - 24, y + 22);
+    ctx.fillText("low risk", x, y + 22);
+    ctx.fillText("high risk", x + barWidth - 46, y + 22);
   }
 
   drawPanelChrome(panelX, panelY, panelWidth, panelHeight) {

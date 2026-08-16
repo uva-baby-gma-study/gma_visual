@@ -17,6 +17,36 @@
 
     *{ box-sizing:border-box; }
 
+    *{
+      scrollbar-width:thin;
+      scrollbar-color:rgba(160,175,195,0.42) rgba(255,255,255,0.035);
+    }
+
+    *::-webkit-scrollbar{
+      width:10px;
+      height:10px;
+    }
+
+    *::-webkit-scrollbar-track{
+      background:rgba(255,255,255,0.035);
+      border-radius:999px;
+    }
+
+    *::-webkit-scrollbar-thumb{
+      background:linear-gradient(180deg, rgba(190,205,224,0.58), rgba(112,128,150,0.42));
+      border:2px solid #121212;
+      border-radius:999px;
+      min-height:48px;
+    }
+
+    *::-webkit-scrollbar-thumb:hover{
+      background:linear-gradient(180deg, rgba(216,229,246,0.74), rgba(136,154,178,0.58));
+    }
+
+    *::-webkit-scrollbar-corner{
+      background:transparent;
+    }
+
     body{
       margin:0;
       height:100vh;
@@ -639,6 +669,142 @@
       color:#94a3b8;
       margin-top:-4px;
     }
+
+    .surveyPanel{
+      position:fixed;
+      right:22px;
+      bottom:22px;
+      width:min(420px, calc(100vw - 44px));
+      height:min(620px, calc(100vh - 44px));
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      background:linear-gradient(180deg, rgba(19,24,34,0.96), rgba(8,10,14,0.96));
+      border:1px solid rgba(148,163,184,0.28);
+      border-radius:20px;
+      box-shadow:0 28px 80px rgba(0,0,0,0.52), 0 0 0 1px rgba(255,255,255,0.04) inset;
+      z-index:850;
+      transition:width 180ms ease, height 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+    }
+
+    .surveyPanel.is-expanded{
+      width:min(50vw, 820px);
+      height:min(82vh, 820px);
+    }
+
+    .surveyPanel.is-minimized{
+      width:min(330px, calc(100vw - 44px));
+      height:auto;
+    }
+
+    .surveyHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:12px 14px;
+      cursor:grab;
+      user-select:none;
+      background:linear-gradient(135deg, rgba(59,130,246,0.18), rgba(20,184,166,0.10));
+      border-bottom:1px solid rgba(148,163,184,0.18);
+    }
+
+    .surveyHeader:active{
+      cursor:grabbing;
+    }
+
+    .surveyTitleGroup{
+      min-width:0;
+    }
+
+    .surveyTitle{
+      font-size:14px;
+      font-weight:800;
+      color:#f8fafc;
+      line-height:1.2;
+    }
+
+    .surveySubtitle{
+      margin-top:2px;
+      font-size:11px;
+      color:#a7b4c7;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .surveyActions{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex:0 0 auto;
+    }
+
+    .surveyIconBtn{
+      width:32px;
+      height:32px;
+      padding:0;
+      display:grid;
+      place-items:center;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.07);
+      color:#f8fafc;
+      font-size:16px;
+      font-weight:800;
+    }
+
+    .surveyIconBtn:hover{
+      background:rgba(255,255,255,0.13);
+      border-color:rgba(255,255,255,0.24);
+    }
+
+    .surveyFrameWrap{
+      flex:1;
+      min-height:0;
+      background:#ffffff;
+    }
+
+    .surveyPanel.is-minimized .surveyFrameWrap,
+    .surveyPanel.is-minimized .surveyFooter{
+      display:none;
+    }
+
+    .surveyFrame{
+      width:100%;
+      height:100%;
+      border:0;
+      background:#ffffff;
+    }
+
+    .surveyFooter{
+      padding:9px 12px 11px;
+      border-top:1px solid rgba(148,163,184,0.16);
+      background:rgba(8,10,14,0.96);
+      color:#9ca3af;
+      font-size:11px;
+      line-height:1.35;
+    }
+
+    .surveyFooter a{
+      color:#93c5fd;
+      font-weight:700;
+      text-decoration:none;
+    }
+
+    .surveyFooter a:hover{
+      text-decoration:underline;
+    }
+
+    @media (max-width: 760px){
+      .surveyPanel,
+      .surveyPanel.is-expanded{
+        width:calc(100vw - 24px);
+        height:min(78vh, 680px);
+        right:12px;
+        bottom:12px;
+      }
+    }
   </style>
 </head>
 
@@ -648,7 +814,7 @@
       <h2>DMD Viewer</h2>
 
       <div class="section">
-        <div class="sectionTitle">Selection</div>
+        <div class="sectionTitle">Controls</div>
 
         <div class="row">
           <label for="subjectSelect">Infant</label>
@@ -658,6 +824,18 @@
         </div>
 
         <div class="row small" id="status"></div>
+
+        <div class="row controlRow">
+          <label for="zoomSlider">Zoom</label>
+          <input id="zoomSlider" type="range" min="100" max="900" value="300" />
+          <span id="zoomValueLabel" class="controlValue">1.0x</span>
+        </div>
+
+        <div class="row controlRow">
+          <label for="speedSlider">Speed</label>
+          <input id="speedSlider" type="range" min="0.5" max="4.0" step="0.1" value="1.0" />
+          <span id="speedValueLabel" class="controlValue">1.0x</span>
+        </div>
       </div>
 
       <div class="section">
@@ -688,21 +866,6 @@
           </div>
           <div id="jointSelectionHint" class="small"></div>
           <div id="jointSelectionList" class="jointGrid"></div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="sectionTitle">Features</div>
-        <div class="row controlRow">
-          <label for="zoomSlider">Zoom</label>
-          <input id="zoomSlider" type="range" min="100" max="900" value="300" />
-          <span id="zoomValueLabel" class="controlValue">1.0x</span>
-        </div>
-
-        <div class="row controlRow">
-          <label for="speedSlider">Speed</label>
-          <input id="speedSlider" type="range" min="0.5" max="4.0" step="0.1" value="1.0" />
-          <span id="speedValueLabel" class="controlValue">1.0x</span>
         </div>
       </div>
 
@@ -787,6 +950,33 @@
     </main>
   </div>
 
+  <div id="surveyPanel" class="surveyPanel" aria-label="Caregiver survey panel">
+    <div id="surveyHeader" class="surveyHeader">
+      <div class="surveyTitleGroup">
+        <div class="surveyTitle">Survey</div>
+        <div class="surveySubtitle">Keep this open while exploring the motion viewer</div>
+      </div>
+      <div class="surveyActions">
+        <button id="surveyExpandBtn" class="surveyIconBtn" type="button" aria-label="Enlarge survey">↗</button>
+        <button id="surveyMinimizeBtn" class="surveyIconBtn" type="button" aria-label="Minimize survey">−</button>
+      </div>
+    </div>
+    <div class="surveyFrameWrap">
+      <iframe
+        id="surveyFrame"
+        class="surveyFrame"
+        title="Caregiver survey"
+        src="https://virginia.az1.qualtrics.com/jfe/form/SV_b2x6wDK1sCsCE74"
+      ></iframe>
+    </div>
+    <div class="surveyFooter">
+      If the survey does not load here, Qualtrics may be blocking embedded display.
+      <a href="https://virginia.az1.qualtrics.com/jfe/form/SV_b2x6wDK1sCsCE74" target="_blank" rel="noopener noreferrer">
+        Open the survey in a new tab
+      </a>.
+    </div>
+  </div>
+
   <div id="visualizationExplainModal" class="modalOverlay" hidden aria-hidden="true">
     <div
       class="modalCard"
@@ -805,16 +995,16 @@
     </div>
   </div>
 
-  <script src="visualizations/dynamic/dynamicHeatmap.js?v=20260515d"></script>
+  <script src="visualizations/dynamic/dynamicHeatmap.js?v=20260815b"></script>
   <script src="visualizations/dynamic/dynamicLinePlot.js?v=20260611c"></script>
   <script src="visualizations/dynamic/dynamicStackedLinePlot.js?v=20260611h"></script>
-  <script src="visualizations/dynamic/dynamicEpisodePlot.js?v=20260611c"></script>
+  <script src="visualizations/dynamic/dynamicEpisodePlot.js?v=20260815a"></script>
   <script src="visualizations/dynamic/dynamicComponentVariancePlot.js?v=20260611e"></script>
-  <script src="visualizations/static/staticHeatmap.js?v=20260611g"></script>
+  <script src="visualizations/static/staticHeatmap.js?v=20260815a"></script>
   <script src="visualizations/static/staticLinePlot.js?v=20260611c"></script>
   <script src="visualizations/static/staticStackedLinePlot.js?v=20260611h"></script>
-  <script src="visualizations/static/staticEpisodePlot.js?v=20260611c"></script>
+  <script src="visualizations/static/staticEpisodePlot.js?v=20260815a"></script>
   <script src="visualizations/static/staticComponentVariancePlot.js?v=20260611e"></script>
-  <script src="app.js?v=20260724b"></script>
+  <script src="app.js?v=20260816c"></script>
 </body>
 </html>
