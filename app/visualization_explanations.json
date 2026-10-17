@@ -12,7 +12,7 @@
     "lineplot": {
       "title": "Dynamic Individual Lines",
       "description": [
-        "This view shows one line for each selected joint up to the current frame. The line rises when that joint is moving more strongly at that moment. The magnitude is scaled relative to the movement observed up to the current frame. Choose Speed to see how much the joint moves from frame to frame. Choose Acceleration to see when the movement changes suddenly. Compare the line shapes to see which joints are more active and when."
+        "This view shows one line for each selected joint up to the current frame. The magnitude is scaled relative to the movement observed up to the current frame. Choose Speed to see how much the joint moves from frame to frame. Choose Acceleration to see changes in speed: above the middle zero line means the joint is speeding up, while below it means the joint is slowing down. Compare the line shapes to see which joints are more active and when."
       ],
       "compareWithNormal": [
         "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In these periods, the line patterns for several joints may appear similar in shape."
@@ -21,7 +21,7 @@
     "stackedlineplot": {
       "title": "Dynamic Stacked Lines",
       "description": [
-        "This view shows the movement of all selected joints together in one shared graph across the full sequence. Each colored line shows how movement for one joint rises and falls over time. Values are scaled relative to the movement observed so far across all selected joints. A line rises when that joint is moving more strongly at that moment. Use this view to compare joints directly. When multiple lines rise at the same time, those joints may be moving together. When one line stays much higher than the others, that joint is contributing more movement at that time."
+        "This view shows the movement of all selected joints together in one shared graph across the full sequence. Each colored line shows how movement for one joint rises and falls over time. Values are scaled relative to the movement observed so far across all selected joints. With Acceleration selected, the middle line is zero: values above it show speeding up, and values below it show slowing down. Use this view to compare joints directly. When multiple lines rise at the same time, those joints may be moving together."
       ],
       "compareWithNormal": [
         "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. During these periods, the line patterns for several joints may appear similar in shape, although they may not fully overlap because movement magnitude can still differ across joints."
@@ -30,7 +30,7 @@
     "episodes": {
       "title": "Dynamic Movement Episodes",
       "description": [
-        "This view represents only detected strong movement episodes as bars for each selected joint up to the current frame. Wider bars indicate longer movement episodes, while taller bars indicate stronger movement. The episodes are redetermined using a threshold that updates as the video progresses, using only the movement up to the current frame. As more frames become available, a bar may appear, disappear, return, or merge with nearby bars. Choose Speed to detect episodes when the joint is moving strongly from frame to frame. Choose Acceleration to detect episodes when the movement changes suddenly. Compare the bars to see which joints have stronger, longer, or more frequent movement episodes, and whether multiple joints become active at similar times."
+        "This view represents only detected strong movement episodes as bars for each selected joint up to the current frame. Wider bars indicate longer movement episodes, while taller bars indicate stronger movement. The episodes are redetermined using a threshold that updates as the video progresses, using only the movement up to the current frame. As more frames become available, a bar may appear, disappear, return, or merge with nearby bars. Choose Speed to detect episodes when the joint is moving strongly from frame to frame. With Acceleration selected, bars above the middle zero line show speeding up and bars below it show slowing down."
       ],
       "compareWithNormal": [
         "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In this view, bars for several joints may appear and disappear at similar times, with similar widths and heights."
@@ -61,7 +61,7 @@
     "lineplot": {
       "title": "Static Individual Lines",
       "description": [
-        "This view shows the full movement trace for each selected joint across the entire sequence. The line rises when that joint is moving more strongly at that moment. Values are scaled relative to the full movement sequence. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. Choose Speed to see how much the joint moves from frame to frame. Choose Acceleration to see when the movement changes suddenly. Compare the line shapes to see which joints are more active and when."
+        "This view shows the full movement trace for each selected joint across the entire sequence. Values are scaled relative to the full movement sequence. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. Choose Speed to see how much the joint moves from frame to frame. Choose Acceleration to see changes in speed: above the middle zero line means the joint is speeding up, while below it means the joint is slowing down. Compare the line shapes to see which joints are more active and when."
       ],
       "compareWithNormal": [
         "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In these periods, the line patterns for several joints may appear similar in shape."
@@ -70,7 +70,7 @@
     "stackedlineplot": {
       "title": "Static Stacked Lines",
       "description": [
-        "This view shows the movement of all selected joints together in one shared graph up to the current frame. Each colored line shows how movement for one joint rises and falls over time. Values are scaled relative to movement across all selected joints over the entire sequence. A line rises when that joint is moving more strongly at that moment. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. Use this view to compare joints directly. When multiple lines rise at the same time, those joints may be moving together. When one line stays much higher than the others, that joint is contributing more movement at that time."
+        "This view shows the movement of all selected joints together in one shared graph up to the current frame. Each colored line shows how movement for one joint rises and falls over time. Values are scaled relative to movement across all selected joints over the entire sequence. With Acceleration selected, the middle line is zero: values above it show speeding up, and values below it show slowing down. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. Use this view to compare joints directly."
       ],
       "compareWithNormal": [
         "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. During these periods, the line patterns for several joints may appear similar in shape, although they may not fully overlap because movement magnitude can still differ across joints."
@@ -79,7 +79,7 @@
     "episodes": {
       "title": "Static Movement Episodes",
       "description": [
-        "This view represents only detected strong movement episodes as bars for each selected joint across the full sequence. Wider bars indicate longer movement episodes, while taller bars indicate stronger movement. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. The episodes are determined after seeing the entire recording, so this view shows the strongest movement episodes across the full sequence. Choose Speed to detect episodes when the joint is moving strongly from frame to frame. Choose Acceleration to detect episodes when the movement changes suddenly. Compare the bars to see which joints have stronger, longer, or more frequent movement episodes, and whether multiple joints become active at similar times."
+        "This view represents only detected strong movement episodes as bars for each selected joint across the full sequence. Wider bars indicate longer movement episodes, while taller bars indicate stronger movement. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. The episodes are determined after seeing the entire recording, so this view shows the strongest movement episodes across the full sequence. Choose Speed to detect episodes when the joint is moving strongly from frame to frame. With Acceleration selected, bars above the middle zero line show speeding up and bars below it show slowing down."
       ],
       "compareWithNormal": [
         "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In this view, bars for several joints may occur during similar time periods, with similar widths and heights."

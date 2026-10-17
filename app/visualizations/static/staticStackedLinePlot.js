@@ -67,7 +67,7 @@ class StaticStackedLinePlot {
 
       const accelerationSeries = speedSeries.map((value, frame) => {
         if (frame < 2) return 0;
-        return Math.abs(value - speedSeries[frame - 1]);
+        return value - speedSeries[frame - 1];
       });
 
       this.speedByJoint.set(this.jointNames[jointIndex], speedSeries);
@@ -112,13 +112,21 @@ class StaticStackedLinePlot {
     seriesList.forEach(series => {
       const startFrame = this.getVisibleStartFrame(series.length);
       for (let frame = startFrame; frame < series.length; frame++) {
-        if (series[frame] > peak) {
-          peak = series[frame];
+        if (Math.abs(series[frame]) > peak) {
+          peak = Math.abs(series[frame]);
         }
       }
     });
 
     return peak > 0 ? peak * 1.1 : 1;
+  }
+
+  getSeriesY(value, plotTop, plotHeight, seriesScale) {
+    const normalized = this.metric === "acceleration"
+      ? (value / seriesScale + 1) / 2
+      : value / seriesScale;
+
+    return plotTop + plotHeight - normalized * plotHeight;
   }
 
   drawLegend(legendX, legendY, legendWidth, compact = false) {
@@ -199,6 +207,17 @@ class StaticStackedLinePlot {
       ctx.stroke();
     }
 
+    if (this.metric === "acceleration") {
+      ctx.strokeStyle = "rgba(255,255,255,0.24)";
+      ctx.beginPath();
+      ctx.moveTo(leftPad, topPad + plotHeight / 2);
+      ctx.lineTo(leftPad + plotWidth, topPad + plotHeight / 2);
+      ctx.stroke();
+      ctx.fillStyle = "#9fb0c3";
+      ctx.font = '10px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+      ctx.fillText("0", leftPad + 4, topPad + plotHeight / 2 - 4);
+    }
+
     const markerFrame = Math.max(visibleStartFrame, Math.min(clampedFrame, visibleEndFrame));
     const markerX = leftPad + ((markerFrame - visibleStartFrame) / frameSpan) * plotWidth;
     ctx.strokeStyle = "rgba(255,255,255,0.14)";
@@ -220,7 +239,7 @@ class StaticStackedLinePlot {
 
       for (let frame = startFrame; frame < series.length; frame++) {
         const x = leftPad + ((frame - visibleStartFrame) / frameSpan) * plotWidth;
-        const y = topPad + plotHeight - (series[frame] / sharedScale) * plotHeight;
+        const y = this.getSeriesY(series[frame], topPad, plotHeight, sharedScale);
 
         if (frame === startFrame) {
           ctx.moveTo(x, y);
@@ -233,7 +252,9 @@ class StaticStackedLinePlot {
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      const pointY = topPad + plotHeight - (series[markerFrame] / sharedScale) * plotHeight;
+      const pointY = this.getSeriesY(
+        series[markerFrame], topPad, plotHeight, sharedScale
+      );
       ctx.beginPath();
       ctx.arc(markerX, pointY, 4, 0, Math.PI * 2);
       ctx.fillStyle = color;

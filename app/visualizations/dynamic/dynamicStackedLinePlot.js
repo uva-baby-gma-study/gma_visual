@@ -67,7 +67,7 @@ class DynamicStackedLinePlot {
 
       const accelerationSeries = speedSeries.map((value, frame) => {
         if (frame < 2) return 0;
-        return Math.abs(value - speedSeries[frame - 1]);
+        return value - speedSeries[frame - 1];
       });
 
       this.speedByJoint.set(this.jointNames[jointIndex], speedSeries);
@@ -114,13 +114,21 @@ class DynamicStackedLinePlot {
       const finalFrame = Math.max(0, Math.min(lastFrame, series.length - 1));
 
       for (let frame = startFrame; frame <= finalFrame; frame++) {
-        if (series[frame] > peak) {
-          peak = series[frame];
+        if (Math.abs(series[frame]) > peak) {
+          peak = Math.abs(series[frame]);
         }
       }
     });
 
     return peak > 0 ? peak * 1.1 : 1;
+  }
+
+  getSeriesY(value, plotTop, plotHeight, seriesScale) {
+    const normalized = this.metric === "acceleration"
+      ? (value / seriesScale + 1) / 2
+      : value / seriesScale;
+
+    return plotTop + plotHeight - normalized * plotHeight;
   }
 
   drawLegend(legendX, legendY, legendWidth, compact = false) {
@@ -201,6 +209,17 @@ class DynamicStackedLinePlot {
       ctx.stroke();
     }
 
+    if (this.metric === "acceleration") {
+      ctx.strokeStyle = "rgba(255,255,255,0.24)";
+      ctx.beginPath();
+      ctx.moveTo(leftPad, topPad + plotHeight / 2);
+      ctx.lineTo(leftPad + plotWidth, topPad + plotHeight / 2);
+      ctx.stroke();
+      ctx.fillStyle = "#9fb0c3";
+      ctx.font = '10px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+      ctx.fillText("0", leftPad + 4, topPad + plotHeight / 2 - 4);
+    }
+
     const finalFrame = Math.max(visibleStartFrame, Math.min(clampedFrame, visibleEndFrame));
     const markerX = leftPad + ((finalFrame - visibleStartFrame) / frameSpan) * plotWidth;
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
@@ -223,7 +242,7 @@ class DynamicStackedLinePlot {
 
       for (let frame = startFrame; frame <= endFrame; frame++) {
         const x = leftPad + ((frame - visibleStartFrame) / frameSpan) * plotWidth;
-        const y = topPad + plotHeight - (series[frame] / sharedScale) * plotHeight;
+        const y = this.getSeriesY(series[frame], topPad, plotHeight, sharedScale);
 
         if (frame === startFrame) {
           ctx.moveTo(x, y);
@@ -236,7 +255,9 @@ class DynamicStackedLinePlot {
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      const pointY = topPad + plotHeight - (series[endFrame] / sharedScale) * plotHeight;
+      const pointY = this.getSeriesY(
+        series[endFrame], topPad, plotHeight, sharedScale
+      );
       ctx.beginPath();
       ctx.arc(markerX, pointY, 4, 0, Math.PI * 2);
       ctx.fillStyle = color;

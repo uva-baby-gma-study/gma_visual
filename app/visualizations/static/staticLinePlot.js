@@ -70,7 +70,7 @@ class StaticLinePlot {
 
       const accelerationSeries = speedSeries.map((value, frame) => {
         if (frame < 2) return 0;
-        return Math.abs(value - speedSeries[frame - 1]);
+        return value - speedSeries[frame - 1];
       });
 
       this.speedByJoint.set(this.jointNames[jointIndex], speedSeries);
@@ -121,12 +121,20 @@ class StaticLinePlot {
     let peak = 0;
 
     for (let frame = startFrame; frame < series.length; frame++) {
-      if (series[frame] > peak) {
-        peak = series[frame];
+      if (Math.abs(series[frame]) > peak) {
+        peak = Math.abs(series[frame]);
       }
     }
 
     return peak > 0 ? peak * 1.1 : 1;
+  }
+
+  getSeriesY(value, plotTop, plotHeight, seriesScale) {
+    const normalized = this.metric === "acceleration"
+      ? (value / seriesScale + 1) / 2
+      : value / seriesScale;
+
+    return plotTop + plotHeight - normalized * plotHeight;
   }
 
   getComparisonScaleCandidates() {
@@ -163,7 +171,7 @@ class StaticLinePlot {
 
     for (let frame = startFrame; frame < series.length; frame++) {
       const x = plotLeft + ((frame - startFrame) / frameSpan) * plotWidth;
-      const y = plotTop + plotHeight - (series[frame] / seriesScale) * plotHeight;
+      const y = this.getSeriesY(series[frame], plotTop, plotHeight, seriesScale);
 
       if (frame === startFrame) {
         ctx.moveTo(x, y);
@@ -180,7 +188,9 @@ class StaticLinePlot {
       startFrame,
       Math.min(this.currentFrame, series.length - 1)
     );
-    const pointY = plotTop + plotHeight - (series[clampedFrame] / seriesScale) * plotHeight;
+    const pointY = this.getSeriesY(
+      series[clampedFrame], plotTop, plotHeight, seriesScale
+    );
 
     ctx.beginPath();
     ctx.arc(xAtFrame, pointY, 4, 0, Math.PI * 2);
@@ -261,9 +271,18 @@ class StaticLinePlot {
 
       ctx.strokeStyle = "rgba(255,255,255,0.12)";
       ctx.beginPath();
-      ctx.moveTo(leftPad, plotTop + innerHeight);
-      ctx.lineTo(leftPad + plotWidth, plotTop + innerHeight);
+      const referenceY = this.metric === "acceleration"
+        ? plotTop + innerHeight / 2
+        : plotTop + innerHeight;
+      ctx.moveTo(leftPad, referenceY);
+      ctx.lineTo(leftPad + plotWidth, referenceY);
       ctx.stroke();
+
+      if (this.metric === "acceleration") {
+        ctx.fillStyle = "#9fb0c3";
+        ctx.font = '10px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+        ctx.fillText("0", leftPad + 4, referenceY - 4);
+      }
 
       ctx.fillStyle = "#cfcfcf";
       ctx.font = `${labelFontSize}px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif`;

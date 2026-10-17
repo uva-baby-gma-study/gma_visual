@@ -68,7 +68,7 @@ class DynamicEpisodePlot {
 
       const accelerationSeries = speedSeries.map((value, frame) => {
         if (frame < 2) return 0;
-        return Math.abs(value - speedSeries[frame - 1]);
+        return value - speedSeries[frame - 1];
       });
 
       this.speedByJoint.set(this.jointNames[jointIndex], speedSeries);
@@ -124,7 +124,7 @@ class DynamicEpisodePlot {
 
     let peak = 0;
     for (let frame = startFrame; frame <= endFrame; frame++) {
-      if (series[frame] > peak) peak = series[frame];
+      peak = Math.max(peak, Math.abs(series[frame]));
     }
     return peak;
   }
@@ -151,8 +151,9 @@ class DynamicEpisodePlot {
     let count = 0;
 
     for (let frame = startFrame; frame <= endFrame; frame++) {
-      peak = Math.max(peak, series[frame]);
-      total += series[frame];
+      const magnitude = Math.abs(series[frame]);
+      peak = Math.max(peak, magnitude);
+      total += magnitude;
       count++;
     }
 
@@ -165,19 +166,26 @@ class DynamicEpisodePlot {
     let frame = startFrame;
 
     while (frame <= endFrame) {
-      if (series[frame] < threshold) {
+      const magnitude = Math.abs(series[frame]);
+      if (magnitude < threshold) {
         frame++;
         continue;
       }
 
       const episodeStart = frame;
+      const sign = Math.sign(series[frame]);
       let episodePeak = 0;
       let episodeSum = 0;
       let episodeEnd = frame;
 
-      while (frame <= endFrame && series[frame] >= threshold) {
-        episodePeak = Math.max(episodePeak, series[frame]);
-        episodeSum += series[frame];
+      while (
+        frame <= endFrame &&
+        Math.abs(series[frame]) >= threshold &&
+        Math.sign(series[frame]) === sign
+      ) {
+        const frameMagnitude = Math.abs(series[frame]);
+        episodePeak = Math.max(episodePeak, frameMagnitude);
+        episodeSum += frameMagnitude;
         episodeEnd = frame;
         frame++;
       }
@@ -189,6 +197,7 @@ class DynamicEpisodePlot {
         duration,
         mean: episodeSum / duration,
         peak: episodePeak,
+        sign,
         intensity: intensityPeak > 0 ? episodePeak / intensityPeak : 0
       });
     }
@@ -204,11 +213,19 @@ class DynamicEpisodePlot {
       const x = plotLeft + ((episode.startFrame - startFrame) / frameSpan) * plotWidth;
       const widthPx = Math.max(4, (episode.duration / frameSpan) * plotWidth);
       const visualIntensity = Math.pow(Math.max(0.04, episode.intensity), 1.9);
-      const rawBarHeight = Math.max(
-        plotHeight * 0.14,
-        plotHeight * (0.16 + 0.78 * visualIntensity)
-      );
-      const rawY = plotTop + plotHeight - rawBarHeight - plotHeight * 0.08;
+      const rawBarHeight = this.metric === "acceleration"
+        ? Math.max(
+          plotHeight * 0.08,
+          plotHeight * (0.08 + 0.38 * visualIntensity)
+        )
+        : Math.max(
+          plotHeight * 0.14,
+          plotHeight * (0.16 + 0.78 * visualIntensity)
+        );
+      const zeroY = plotTop + plotHeight / 2;
+      const rawY = this.metric === "acceleration"
+        ? (episode.sign < 0 ? zeroY : zeroY - rawBarHeight)
+        : plotTop + plotHeight - rawBarHeight - plotHeight * 0.08;
       const barX = Math.round(x);
       const barY = Math.round(rawY);
       const barWidth = Math.max(4, Math.round(widthPx));
@@ -286,6 +303,17 @@ class DynamicEpisodePlot {
       ctx.fillRect(leftPad, bandTop, plotWidth, bandHeight);
       ctx.strokeStyle = "rgba(255,255,255,0.08)";
       ctx.strokeRect(leftPad, bandTop, plotWidth, bandHeight);
+
+      if (this.metric === "acceleration") {
+        ctx.strokeStyle = "rgba(255,255,255,0.24)";
+        ctx.beginPath();
+        ctx.moveTo(leftPad, bandTop + bandHeight / 2);
+        ctx.lineTo(leftPad + plotWidth, bandTop + bandHeight / 2);
+        ctx.stroke();
+        ctx.fillStyle = "#9fb0c3";
+        ctx.font = '10px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+        ctx.fillText("0", leftPad + 4, bandTop + bandHeight / 2 - 4);
+      }
 
       ctx.fillStyle = "#d0d7e4";
       ctx.font = `${labelFontSize}px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif`;
