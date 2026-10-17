@@ -141,9 +141,9 @@ class StaticHeatmap {
 
     ctx.font = `${compact ? 10 : 11}px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif`;
     ctx.fillStyle = "#9fb0c3";
-    ctx.fillText("low movement", x, y + 22);
+    ctx.fillText("less move", x, y + 22);
     ctx.textAlign = "right";
-    ctx.fillText("high movement", x + barWidth, y + 22);
+    ctx.fillText("more move", x + barWidth, y + 22);
     ctx.textAlign = "left";
   }
 

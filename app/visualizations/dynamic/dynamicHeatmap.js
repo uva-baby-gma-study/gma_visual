@@ -242,9 +242,9 @@ class DynamicMovementHeatmap {
 
     ctx.fillStyle = "#ffffff";
     ctx.font = '10px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText("low movement", gx, gy + 22);
+    ctx.fillText("less move", gx, gy + 22);
     ctx.textAlign = "right";
-    ctx.fillText("high movement", gx + gw, gy + 22);
+    ctx.fillText("more move", gx + gw, gy + 22);
     ctx.textAlign = "left";
   }
 
