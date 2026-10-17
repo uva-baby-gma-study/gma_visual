@@ -1428,6 +1428,22 @@ function renderExplanationSection(title, paragraphs) {
   );
 }
 
+function renderTechnicalDetails(paragraphs) {
+  const safeParagraphs = Array.isArray(paragraphs) ? paragraphs : [];
+  if (!safeParagraphs.length) {
+    return "";
+  }
+
+  return (
+    `<details class="technicalDetails">` +
+    `<summary>Technical details</summary>` +
+    `<div class="technicalDetailsBody">` +
+    safeParagraphs.map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join("") +
+    `</div>` +
+    `</details>`
+  );
+}
+
 async function openVisualizationExplanationModal() {
   const activeDef = getVisualizationDefinition(
     visualizationMode,
@@ -1445,7 +1461,8 @@ async function openVisualizationExplanationModal() {
     renderExplanationSection(
       "What to compare with normal infant movement",
       explanation.compareWithNormal
-    );
+    ) +
+    renderTechnicalDetails(explanation.technicalDetails);
 
   visualizationExplainModal.hidden = false;
   visualizationExplainModal.setAttribute("aria-hidden", "false");

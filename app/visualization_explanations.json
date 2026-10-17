@@ -3,48 +3,66 @@
     "heatmap": {
       "title": "Dynamic Heatmap",
       "description": [
-        "This view shows where movement has accumulated up to the current frame. Green areas indicate lower-risk movement density, yellow areas are in the middle, and red areas indicate higher-risk movement density. Use this view to observe how movement builds over time and whether certain body regions are repeatedly active."
+        "This view shows where the selected joints have passed so far. A color appears where a joint has covered that part of the view. Green means fewer passes. Yellow means more passes. Red means the same area has been covered many times. As the video plays, you can watch these colors build up."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show more rigid and repetitive heatmap patterns, with multiple joints becoming active together rather than moving in a relaxed, spontaneous, and varied way."
+        "Compare where the colors build up. Look for red color that stays in the same small area or builds up quickly. More varied movement may spread color across more areas."
+      ],
+      "technicalDetails": [
+        "For each selected joint, the app places samples along its path from one frame to the next on a small location grid. Samples from all selected joints are added together, then lightly smoothed so nearby locations form one visible area.",
+        "At every frame, the grid contains all samples seen so far. Its colors are scaled using the highest final grid value for that infant: green is lower density, yellow is in the middle, and red is higher density."
       ]
     },
     "lineplot": {
       "title": "Dynamic Individual Lines",
       "description": [
-        "This view shows one line for each selected joint up to the current frame. The magnitude is scaled relative to the movement observed up to the current frame. Choose Speed to see how much the joint moves from frame to frame. Choose Acceleration to see changes in speed: above the middle zero line means the joint is speeding up, while below it means the joint is slowing down. Compare the line shapes to see which joints are more active and when."
+        "Each row shows one selected joint. Choose Speed to see how fast that joint is moving. A higher line means faster movement at that moment. Choose Acceleration to see how fast its speed is changing. Above the middle line means it is speeding up. Below the middle line means it is slowing down."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In these periods, the line patterns for several joints may appear similar in shape."
+        "Compare the timing of the lines. Look for several joints speeding up, slowing down, or resting at the same time. More varied movement may have different line shapes and timing across joints."
+      ],
+      "technicalDetails": [
+        "Speed is the straight-line distance between a joint's position in two neighboring frames. Signed acceleration is the current speed minus the previous speed, so zero is the middle reference line.",
+        "In the dynamic view, each joint is scaled by the largest absolute value seen up to the current frame."
       ]
     },
     "stackedlineplot": {
       "title": "Dynamic Stacked Lines",
       "description": [
-        "This view shows the movement of all selected joints together in one shared graph across the full sequence. Each colored line shows how movement for one joint rises and falls over time. Values are scaled relative to the movement observed so far across all selected joints. With Acceleration selected, the middle line is zero: values above it show speeding up, and values below it show slowing down. Use this view to compare joints directly. When multiple lines rise at the same time, those joints may be moving together."
+        "This view puts the selected joints on one graph. Each color is one joint. Choose Speed to see how fast each joint is moving. Choose Acceleration to see how fast each joint's speed is changing. When Acceleration is selected, the middle line is zero: above it means speeding up and below it means slowing down."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. During these periods, the line patterns for several joints may appear similar in shape, although they may not fully overlap because movement magnitude can still differ across joints."
+        "Compare the colored lines. Look for several lines rising and falling together with similar shapes and timing. More varied movement may have lines changing at different times."
+      ],
+      "technicalDetails": [
+        "Speed and signed acceleration use the same calculations as the individual-line view. All selected joints share one scale, based on the largest absolute value seen up to the current frame.",
+        "This shared scale makes the heights of different colored lines directly comparable within the graph."
       ]
     },
     "episodes": {
       "title": "Dynamic Movement Episodes",
       "description": [
-        "This view represents only detected strong movement episodes as bars for each selected joint up to the current frame. Wider bars indicate longer movement episodes, while taller bars indicate stronger movement. The episodes are redetermined using a threshold that updates as the video progresses, using only the movement up to the current frame. As more frames become available, a bar may appear, disappear, return, or merge with nearby bars. Choose Speed to detect episodes when the joint is moving strongly from frame to frame. With Acceleration selected, bars above the middle zero line show speeding up and bars below it show slowing down."
+        "This view shows only times when a selected joint has a big speed or acceleration change. Acceleration means how fast speed is changing. Each bar is one time period. A wider bar lasts longer. A taller bar is stronger. With Acceleration selected, bars above the middle line show speeding up and bars below it show slowing down. Bars can change as the video plays because the app is still learning what counts as a big change."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In this view, bars for several joints may appear and disappear at similar times, with similar widths and heights."
+        "Compare when the bars begin and end. Look for bars from several joints that start and end together and have similar widths or heights. More varied movement may have bars spread out across joints and time."
+      ],
+      "technicalDetails": [
+        "The app calculates speed or signed acceleration at each frame. It finds periods whose absolute value is above a threshold based on the current peak and average value. Positive and negative acceleration periods are kept separate.",
+        "Bar width represents the number of frames in the period. Bar height represents its peak magnitude. The threshold is recalculated as new frames arrive, so dynamic bars can appear, disappear, join, or split."
       ]
     },
     "componentvariance": {
-      "title": "Dynamic Component Variance",
+      "title": "Dynamic Movement Patterns",
       "description": [
-        "This view shows how different joints contribute to each movement component extracted from the recording. A component represents an important or repeated movement pattern in the body. Click a component to show that pattern in the movement visualization on the left.",
-        "For each joint pair, bars extending to the left and right of the center line compare the left and right joints. Longer bars indicate that the joint contributes more to that component. The percentage shows the joint's relative contribution, with all joint contributions adding up to 100%. Joints contributing more than 40% are marked with an exclamation point.",
-        "Use this view to see whether that pattern looks balanced across both sides or leans more toward one side. Because this is a dynamic view, the contribution values are calculated using only the movement observed up to the current frame. As you move through time, you can watch whether the pattern stays even or becomes more focused in a few joints."
+        "Each box shows one repeated movement pattern found in this recording. Click a box to see that pattern on the body view. The bars show which body areas are most involved. Longer bars and larger percentages mean that area is more involved. A red bold percentage with an exclamation mark means one area is above 40%."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show more components dominated by one joint, such as a single joint contributing more than 40%. This may indicate that the movement pattern is less evenly distributed across the body."
+        "Compare which body areas are most involved in each pattern. Look for patterns that keep focusing on the same joints or the same side of the body."
+      ],
+      "technicalDetails": [
+        "The component analysis separates the recording into repeated motion patterns. For each pattern, the displayed percentage is that joint group's share of the component variance; all displayed shares add to 100%.",
+        "In the dynamic view, values are recomputed with frames available up to the current frame. The alert appears when an individual displayed contribution is greater than 40%."
       ]
     }
   },
@@ -52,47 +70,66 @@
     "heatmap": {
       "title": "Static Heatmap",
       "description": [
-        "This view shows the total movement accumulated across the full sequence for each selected joint. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. Green areas indicate lower-risk accumulated movement, yellow areas are in the middle, and red areas indicate higher-risk accumulated movement. Use this view to compare when movement starts to build and which joints show the greatest overall activity."
+        "Each row is one selected joint. The color shows how far that joint has moved in total up to each point in the video. Green means less total distance. Yellow means more. Red means the joint has moved the farthest. The vertical line marks the frame shown in the body view."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show a more gradual and aligned buildup of movement across joints, suggesting that multiple joints are becoming active in a more synchronized pattern."
+        "Compare how the row colors build up over time. Look for several rows changing at the same time and at a similar rate. More varied movement may have rows changing at different times."
+      ],
+      "technicalDetails": [
+        "For each joint, the app adds the straight-line distance moved between every pair of neighboring frames. Each cell shows that running total at a particular frame.",
+        "All selected rows are scaled by the largest running total in that infant's selected data. Green is lower total distance, yellow is in the middle, and red is higher total distance."
       ]
     },
     "lineplot": {
       "title": "Static Individual Lines",
       "description": [
-        "This view shows the full movement trace for each selected joint across the entire sequence. Values are scaled relative to the full movement sequence. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. Choose Speed to see how much the joint moves from frame to frame. Choose Acceleration to see changes in speed: above the middle zero line means the joint is speeding up, while below it means the joint is slowing down. Compare the line shapes to see which joints are more active and when."
+        "Each row shows one selected joint for the full video. Choose Speed to see how fast that joint is moving. A higher line means faster movement at that moment. Choose Acceleration to see how fast its speed is changing. Above the middle line means it is speeding up. Below the middle line means it is slowing down. The vertical line marks the frame shown in the body view."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In these periods, the line patterns for several joints may appear similar in shape."
+        "Compare the timing of the lines. Look for several joints speeding up, slowing down, or resting at the same time. More varied movement may have different line shapes and timing across joints."
+      ],
+      "technicalDetails": [
+        "Speed is the straight-line distance between a joint's position in two neighboring frames. Signed acceleration is the current speed minus the previous speed, so zero is the middle reference line.",
+        "Each joint is scaled by its largest absolute value across the full video."
       ]
     },
     "stackedlineplot": {
       "title": "Static Stacked Lines",
       "description": [
-        "This view shows the movement of all selected joints together in one shared graph up to the current frame. Each colored line shows how movement for one joint rises and falls over time. Values are scaled relative to movement across all selected joints over the entire sequence. With Acceleration selected, the middle line is zero: values above it show speeding up, and values below it show slowing down. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. Use this view to compare joints directly."
+        "This view puts the selected joints on one graph for the full video. Each color is one joint. Choose Speed to see how fast each joint is moving. Choose Acceleration to see how fast each joint's speed is changing. When Acceleration is selected, the middle line is zero: above it means speeding up and below it means slowing down. The vertical line marks the frame shown in the body view."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. During these periods, the line patterns for several joints may appear similar in shape, although they may not fully overlap because movement magnitude can still differ across joints."
+        "Compare the colored lines. Look for several lines rising and falling together with similar shapes and timing. More varied movement may have lines changing at different times."
+      ],
+      "technicalDetails": [
+        "Speed and signed acceleration use the same calculations as the individual-line view. All selected joints share one scale, based on the largest absolute value in the full video.",
+        "This shared scale makes the heights of different colored lines directly comparable within the graph."
       ]
     },
     "episodes": {
       "title": "Static Movement Episodes",
       "description": [
-        "This view represents only detected strong movement episodes as bars for each selected joint across the full sequence. Wider bars indicate longer movement episodes, while taller bars indicate stronger movement. The vertical line across all plots indicates the current frame shown in the movement visualization on the left. The episodes are determined after seeing the entire recording, so this view shows the strongest movement episodes across the full sequence. Choose Speed to detect episodes when the joint is moving strongly from frame to frame. With Acceleration selected, bars above the middle zero line show speeding up and bars below it show slowing down."
+        "This view shows only times when a selected joint has a big speed or acceleration change. Acceleration means how fast speed is changing. Each bar is one time period. A wider bar lasts longer. A taller bar is stronger. With Acceleration selected, bars above the middle line show speeding up and bars below it show slowing down. The vertical line marks the frame shown in the body view."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show multiple joints activating and relaxing together. In this view, bars for several joints may occur during similar time periods, with similar widths and heights."
+        "Compare when the bars begin and end. Look for bars from several joints that start and end together and have similar widths or heights. More varied movement may have bars spread out across joints and time."
+      ],
+      "technicalDetails": [
+        "The app calculates speed or signed acceleration at each frame. It finds periods whose absolute value is above a threshold based on the peak and average value from the full video. Positive and negative acceleration periods are kept separate.",
+        "Bar width represents the number of frames in the period. Bar height represents its peak magnitude."
       ]
     },
     "componentvariance": {
-      "title": "Static Component Variance",
+      "title": "Movement Patterns",
       "description": [
-        "This view shows how different joints contribute to each movement component extracted from the recording. A component represents an important or repeated movement pattern in the body. Click a component to show that pattern in the movement visualization on the left.",
-        "For each joint pair, bars extending to the left and right of the center line compare the left and right joints. Longer bars indicate that the joint contributes more to that component. The percentage shows the joint's relative contribution, with all joint contributions adding up to 100%. Joints contributing more than 40% are marked with an exclamation point. Use this view to see whether a movement pattern is balanced across both sides of the body or leans more toward one side. The contribution values are calculated using the entire movement sequence."
+        "Each box shows one repeated movement pattern found in this recording. Click a box to see that pattern on the body view. The bars show which body areas are most involved. Longer bars and larger percentages mean that area is more involved. A red bold percentage with an exclamation mark means one area is above 40%."
       ],
       "compareWithNormal": [
-        "Compared with normal infant movement, infants with cramped-synchronized movements may show more components dominated by one joint, such as a single joint contributing more than 40%. This may indicate that the movement pattern is less evenly distributed across the body."
+        "Compare which body areas are most involved in each pattern. Look for patterns that keep focusing on the same joints or the same side of the body."
+      ],
+      "technicalDetails": [
+        "The component analysis separates the recording into repeated motion patterns. For each pattern, the displayed percentage is that joint group's share of the component variance; all displayed shares add to 100%.",
+        "In the static view, values are calculated from the full video. The alert appears when an individual displayed contribution is greater than 40%."
       ]
     }
   }

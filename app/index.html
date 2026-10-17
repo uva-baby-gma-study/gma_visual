@@ -342,6 +342,52 @@
       font-weight:800;
     }
 
+    .technicalDetails{
+      margin-top:8px;
+      border:1px solid rgba(125,162,255,0.42);
+      border-radius:12px;
+      background:rgba(44,108,255,0.08);
+    }
+
+    .technicalDetails summary{
+      cursor:pointer;
+      padding:11px 14px;
+      color:#dce8ff;
+      font-size:15px;
+      font-weight:800;
+      list-style:none;
+    }
+
+    .technicalDetails summary::-webkit-details-marker{
+      display:none;
+    }
+
+    .technicalDetails summary::after{
+      content:"+";
+      float:right;
+      font-size:18px;
+      line-height:14px;
+    }
+
+    .technicalDetails[open] summary::after{
+      content:"-";
+    }
+
+    .technicalDetailsBody{
+      padding:0 14px 14px;
+      color:#b9c7db;
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .technicalDetailsBody p{
+      margin:0 0 10px;
+    }
+
+    .technicalDetailsBody p:last-child{
+      margin-bottom:0;
+    }
+
     .section{
       border:1px solid var(--border);
       border-radius:14px;
