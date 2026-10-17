@@ -36,6 +36,7 @@ const visualizationExplainModal = document.getElementById("visualizationExplainM
 const visualizationExplainTitle = document.getElementById("visualizationExplainTitle");
 const visualizationExplainBody = document.getElementById("visualizationExplainBody");
 const visualizationExplainCloseBtn = document.getElementById("visualizationExplainCloseBtn");
+const heatmapLoadingOverlay = document.getElementById("heatmapLoadingOverlay");
 const lineMetricSection = document.getElementById("lineMetricSection");
 const lineMetricSpeedBtn = document.getElementById("lineMetricSpeedBtn");
 const lineMetricAccelerationBtn = document.getElementById("lineMetricAccelerationBtn");
@@ -97,6 +98,7 @@ const comparisonState = {
   }
 };
 let caregiverVisualizationExplanations = {};
+let dynamicHeatmapLoadingDepth = 0;
 
 // Your 17 joints => 34 dims (x,y)
 const joints = [
@@ -918,6 +920,63 @@ function updateControlValueLabels() {
   }
 }
 
+function isDynamicHeatmapActive() {
+  return visualizationMode === "dynamic" && getActiveVisualizationId() === "heatmap";
+}
+
+function setDynamicHeatmapLoading(isLoading) {
+  if (heatmapLoadingOverlay) {
+    heatmapLoadingOverlay.hidden = !isLoading;
+  }
+
+  document.body.setAttribute("aria-busy", String(isLoading));
+
+  if (layoutEl) {
+    layoutEl.inert = isLoading;
+  }
+  if (surveyPanel) {
+    surveyPanel.inert = isLoading;
+  }
+  if (visualizationExplainModal) {
+    visualizationExplainModal.inert = isLoading;
+  }
+}
+
+function waitForNextPaint() {
+  return new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+}
+
+async function withDynamicHeatmapLoading(task) {
+  if (!isDynamicHeatmapActive() || !sequenceData?.length) {
+    return task();
+  }
+
+  const isOuterUpdate = dynamicHeatmapLoadingDepth === 0;
+  dynamicHeatmapLoadingDepth += 1;
+  const wasPlaying = isOuterUpdate && playing;
+
+  if (isOuterUpdate) {
+    playing = false;
+    setDynamicHeatmapLoading(true);
+    await waitForNextPaint();
+  }
+
+  try {
+    return await task();
+  } finally {
+    dynamicHeatmapLoadingDepth -= 1;
+    if (isOuterUpdate) {
+      setDynamicHeatmapLoading(false);
+      if (wasPlaying) {
+        playing = true;
+        requestAnimationFrame(animate);
+      }
+    }
+  }
+}
+
 function clampSurveyPanelToViewport() {
   if (!surveyPanel) return;
 
@@ -1467,7 +1526,7 @@ function renderJointSelector() {
   }
 }
 
-function toggleJointSelection(jointName, shouldSelect) {
+async function toggleJointSelection(jointName, shouldSelect) {
   const activeDef = getVisualizationDefinition(
     visualizationMode,
     getActiveVisualizationId()
@@ -1503,22 +1562,24 @@ function toggleJointSelection(jointName, shouldSelect) {
   selectedJointsByVisualization[visualizationMode][getActiveVisualizationId()] =
     visualizationJointNames.filter(name => selectedSet.has(name));
 
-  if (
-    activeVisualization &&
-    typeof activeVisualization.setSelectedJoints === "function"
-  ) {
-    activeVisualization.setSelectedJoints(getSelectedJoints());
-  }
+  await withDynamicHeatmapLoading(async () => {
+    if (
+      activeVisualization &&
+      typeof activeVisualization.setSelectedJoints === "function"
+    ) {
+      activeVisualization.setSelectedJoints(getSelectedJoints());
+    }
 
-  renderLineMetricToggle();
-  renderJointSelector();
+    renderLineMetricToggle();
+    renderJointSelector();
 
-  if (comparisonState.active) {
-    requestComparisonRefresh();
-  }
+    if (comparisonState.active) {
+      await refreshComparisonMode();
+    }
+  });
 }
 
-function clearJointSelection() {
+async function clearJointSelection() {
   const activeDef = getVisualizationDefinition(
     visualizationMode,
     getActiveVisualizationId()
@@ -1530,19 +1591,21 @@ function clearJointSelection() {
 
   selectedJointsByVisualization[visualizationMode][getActiveVisualizationId()] = [];
 
-  if (
-    activeVisualization &&
-    typeof activeVisualization.setSelectedJoints === "function"
-  ) {
-    activeVisualization.setSelectedJoints([]);
-  }
+  await withDynamicHeatmapLoading(async () => {
+    if (
+      activeVisualization &&
+      typeof activeVisualization.setSelectedJoints === "function"
+    ) {
+      activeVisualization.setSelectedJoints([]);
+    }
 
-  renderLineMetricToggle();
-  renderJointSelector();
+    renderLineMetricToggle();
+    renderJointSelector();
 
-  if (comparisonState.active) {
-    requestComparisonRefresh();
-  }
+    if (comparisonState.active) {
+      await refreshComparisonMode();
+    }
+  });
 }
 
 function setLineMetric(metric) {
@@ -1602,7 +1665,7 @@ function renderVisualizationTabs() {
   renderJointSelector();
 }
 
-function createVisualization() {
+async function createVisualization() {
   if (!visualizationCanvas) return;
 
   const activeDef = getVisualizationDefinition(
@@ -1622,46 +1685,48 @@ function createVisualization() {
     return;
   }
 
-  activeVisualization = new ViewClass(
-    visualizationCanvas,
-    getJointNamesForVisualization(activeDef)
-  );
+  return withDynamicHeatmapLoading(async () => {
+    activeVisualization = new ViewClass(
+      visualizationCanvas,
+      getJointNamesForVisualization(activeDef)
+    );
 
-  syncAllCanvasLayouts();
+    syncAllCanvasLayouts();
 
-  if (
-    activeDef.supportsJointSelection &&
-    typeof activeVisualization.setSelectedJoints === "function"
-  ) {
-    activeVisualization.setSelectedJoints(getSelectedJoints());
-  }
-
-  if (
-    activeDef.supportsLineMetric &&
-    typeof activeVisualization.setMetric === "function"
-  ) {
-    activeVisualization.setMetric(getSelectedLineMetric());
-  }
-
-  if (sequenceData) {
-    if (typeof activeVisualization.setFullSequence === "function") {
-      activeVisualization.setFullSequence(sequenceData);
+    if (
+      activeDef.supportsJointSelection &&
+      typeof activeVisualization.setSelectedJoints === "function"
+    ) {
+      activeVisualization.setSelectedJoints(getSelectedJoints());
     }
-    activeVisualization.setSequence(buildVisualizationSequence(sequenceData));
-    activeVisualization.setFrame(currentFrame);
-  } else {
-    activeVisualization.draw();
-  }
 
-  syncVarianceVisualizationData();
-  syncComponentVarianceSequences();
+    if (
+      activeDef.supportsLineMetric &&
+      typeof activeVisualization.setMetric === "function"
+    ) {
+      activeVisualization.setMetric(getSelectedLineMetric());
+    }
 
-  updateVisualizationButtons();
-  renderVisualizationTabs();
+    if (sequenceData) {
+      if (typeof activeVisualization.setFullSequence === "function") {
+        activeVisualization.setFullSequence(sequenceData);
+      }
+      activeVisualization.setSequence(buildVisualizationSequence(sequenceData));
+      activeVisualization.setFrame(currentFrame);
+    } else {
+      activeVisualization.draw();
+    }
 
-  if (comparisonState.active) {
-    requestComparisonRefresh();
-  }
+    syncVarianceVisualizationData();
+    syncComponentVarianceSequences();
+
+    updateVisualizationButtons();
+    renderVisualizationTabs();
+
+    if (comparisonState.active) {
+      await refreshComparisonMode();
+    }
+  });
 }
 
 function setVisualizationMode(mode) {
@@ -1699,10 +1764,11 @@ function setVisualizationMode(mode) {
   }
 
   visualizationMode = mode;
-  createVisualization();
-  syncSourceForCurrentView().catch(error => {
-    console.error("Failed to sync source for mode change:", error);
-  });
+  createVisualization()
+    .then(() => syncSourceForCurrentView())
+    .catch(error => {
+      console.error("Failed to sync source for mode change:", error);
+    });
 }
 
 function setVisualizationType(visualizationId) {
@@ -1713,10 +1779,11 @@ function setVisualizationType(visualizationId) {
   }
 
   selectedVisualizationByMode[visualizationMode] = visualizationId;
-  createVisualization();
-  syncSourceForCurrentView().catch(error => {
-    console.error("Failed to sync source for visualization change:", error);
-  });
+  createVisualization()
+    .then(() => syncSourceForCurrentView())
+    .catch(error => {
+      console.error("Failed to sync source for visualization change:", error);
+    });
 }
 
 async function handleVisualizationCanvasClick(event) {
@@ -1884,21 +1951,22 @@ async function loadSequenceSource(subject, descriptor) {
 
   statusEl.textContent = `Loaded ${descriptorLabel} (${T} frames).`;
 
-  if (activeVisualization) {
-    if (typeof activeVisualization.setFullSequence === "function") {
-      activeVisualization.setFullSequence(sequenceData);
+  await withDynamicHeatmapLoading(async () => {
+    if (activeVisualization) {
+      if (typeof activeVisualization.setFullSequence === "function") {
+        activeVisualization.setFullSequence(sequenceData);
+      }
+      activeVisualization.setSequence(buildVisualizationSequence(sequenceData));
     }
-    activeVisualization.setSequence(buildVisualizationSequence(sequenceData));
-  }
 
-  syncVarianceVisualizationData();
-  syncComponentVarianceSequences();
+    syncVarianceVisualizationData();
+    syncComponentVarianceSequences();
+    drawFrame();
 
-  drawFrame();
-
-  if (comparisonState.active) {
-    requestComparisonRefresh();
-  }
+    if (comparisonState.active) {
+      await refreshComparisonMode();
+    }
+  });
 }
 
 function getDefaultSequenceDescriptor() {
@@ -2061,7 +2129,7 @@ function drawSkeletonFrame(targetCtx, targetCanvas, targetSequence, frame) {
 }
 
 function requestComparisonRefresh() {
-  refreshComparisonMode().catch(error => {
+  withDynamicHeatmapLoading(() => refreshComparisonMode()).catch(error => {
     console.error("Failed to refresh comparison mode:", error);
   });
 }
@@ -2512,7 +2580,9 @@ window.addEventListener("resize", () => {
 });
 initSurveyPanelControls();
 loadVisualizationExplanations();
-createVisualization();
+createVisualization().catch(error => {
+  console.error("Failed to create visualization:", error);
+});
 syncAllCanvasLayouts();
 updateRangeFill(frameSlider);
 updateRangeFill(zoomSlider);
