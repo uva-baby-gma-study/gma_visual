@@ -120,6 +120,11 @@ const visualizationJointNames = joints.filter(
     "right_hip"
   ].includes(j)
 );
+// Shoulders remain in the skeleton, but their restricted range can make their
+// heatmap values hard to interpret alongside the more mobile joints.
+const heatmapJointNames = visualizationJointNames.filter(
+  jointName => !["left_shoulder", "right_shoulder"].includes(jointName)
+);
 
 // Component variance still shows hips because those values are part of the pattern summary.
 const componentVarianceJointNames = joints.filter(
@@ -128,14 +133,14 @@ const componentVarianceJointNames = joints.filter(
 const defaultTraceJointNames = ["left_wrist", "right_wrist"];
 const selectedJointsByVisualization = {
   dynamic: {
-    heatmap: visualizationJointNames.slice(),
+    heatmap: heatmapJointNames.slice(),
     lineplot: defaultTraceJointNames.slice(),
     stackedlineplot: defaultTraceJointNames.slice(),
     episodes: defaultTraceJointNames.slice(),
     componentvariance: []
   },
   static: {
-    heatmap: visualizationJointNames.slice(),
+    heatmap: heatmapJointNames.slice(),
     lineplot: defaultTraceJointNames.slice(),
     stackedlineplot: defaultTraceJointNames.slice(),
     episodes: defaultTraceJointNames.slice(),
@@ -842,8 +847,18 @@ function buildVisualizationSequence(fullSequenceData) {
 }
 
 function getJointNamesForVisualization(def) {
-  return def?.id === "componentvariance"
-    ? componentVarianceJointNames
+  if (def?.id === "componentvariance") {
+    return componentVarianceJointNames;
+  }
+
+  // Heatmaps receive the complete reduced sequence so joint indices continue
+  // to match its coordinate pairs. Their selectable list is filtered below.
+  return visualizationJointNames;
+}
+
+function getSelectableJointNames(def) {
+  return def?.id === "heatmap"
+    ? heatmapJointNames
     : visualizationJointNames;
 }
 
@@ -1501,7 +1516,7 @@ function renderJointSelector() {
 
   jointSelectionList.innerHTML = "";
 
-  visualizationJointNames.forEach(jointName => {
+  getSelectableJointNames(activeDef).forEach(jointName => {
     const label = document.createElement("label");
     label.className = "jointOption";
 
@@ -1560,7 +1575,7 @@ async function toggleJointSelection(jointName, shouldSelect) {
   }
 
   selectedJointsByVisualization[visualizationMode][getActiveVisualizationId()] =
-    visualizationJointNames.filter(name => selectedSet.has(name));
+    getSelectableJointNames(activeDef).filter(name => selectedSet.has(name));
 
   await withDynamicHeatmapLoading(async () => {
     if (

@@ -139,10 +139,12 @@ class StaticHeatmap {
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
     ctx.strokeRect(x, y, barWidth, barHeight);
 
-    ctx.font = `${compact ? 11 : 12}px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif`;
+    ctx.font = `${compact ? 10 : 11}px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif`;
     ctx.fillStyle = "#9fb0c3";
-    ctx.fillText("low risk", x, y + 22);
-    ctx.fillText("high risk", x + barWidth - 46, y + 22);
+    ctx.fillText("low movement", x, y + 22);
+    ctx.textAlign = "right";
+    ctx.fillText("high movement", x + barWidth, y + 22);
+    ctx.textAlign = "left";
   }
 
   drawPanelChrome(panelX, panelY, panelWidth, panelHeight) {

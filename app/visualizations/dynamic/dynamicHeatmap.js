@@ -221,7 +221,7 @@ class DynamicMovementHeatmap {
     const ctx = this.ctx;
 
     ctx.fillStyle = "rgba(0,0,0,0.45)";
-    ctx.fillRect(12, 12, 180, 54);
+    ctx.fillRect(12, 12, 220, 58);
 
     ctx.fillStyle = "#ffffff";
     ctx.font = '15px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
@@ -229,7 +229,7 @@ class DynamicMovementHeatmap {
 
     const gx = 22;
     const gy = 42;
-    const gw = 130;
+    const gw = 180;
     const gh = 10;
 
     const grad = ctx.createLinearGradient(gx, 0, gx + gw, 0);
@@ -241,9 +241,11 @@ class DynamicMovementHeatmap {
     ctx.fillRect(gx, gy, gw, gh);
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = '12px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
-    ctx.fillText("low risk", gx, gy + 22);
-    ctx.fillText("high risk", gx + gw - 45, gy + 22);
+    ctx.font = '10px "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+    ctx.fillText("low movement", gx, gy + 22);
+    ctx.textAlign = "right";
+    ctx.fillText("high movement", gx + gw, gy + 22);
+    ctx.textAlign = "left";
   }
 
   getJointPositionMap(frame) {
