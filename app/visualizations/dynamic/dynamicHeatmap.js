@@ -33,7 +33,7 @@ class DynamicMovementHeatmap {
     this.cellSize = 6;
     this.depositSteps = 12;
     this.depositAmount = 1.0;
-    this.blurPasses = 4;
+    this.blurPasses = 2;
     this.threshold = 0.03;
     this.gamma = 0.7;
 
