@@ -99,6 +99,7 @@ const comparisonState = {
 };
 let caregiverVisualizationExplanations = {};
 let dynamicHeatmapLoadingDepth = 0;
+let comparisonRefreshGeneration = 0;
 
 // Your 17 joints => 34 dims (x,y)
 const joints = [
@@ -2166,14 +2167,28 @@ function requestComparisonRefresh() {
   });
 }
 
-async function syncVisualizationInstanceData(view, subject) {
+async function syncVisualizationInstanceData(
+  view,
+  subject,
+  componentData = null,
+  shouldContinue = () => true
+) {
   if (!view || !subject) {
-    return;
+    return false;
   }
 
   if (typeof view.setVarianceData === "function") {
-    const varianceData = await ensureJointVarianceData();
-    const components = varianceData.get(subject) || [];
+    const varianceData = Array.isArray(componentData)
+      ? null
+      : await ensureJointVarianceData();
+    const components = Array.isArray(componentData)
+      ? componentData
+      : (varianceData.get(subject) || getSubjectComponentDefinitions(subject));
+
+    if (!shouldContinue()) {
+      return false;
+    }
+
     view.setVarianceData(subject, components);
     if (typeof view.setSelectedComponent === "function") {
       view.setSelectedComponent(getSelectedComponentId(subject));
@@ -2194,14 +2209,26 @@ async function syncVisualizationInstanceData(view, subject) {
     }
 
     const sequenceMap = await ensureComponentSequences(subject);
+    if (!shouldContinue()) {
+      return false;
+    }
+
     view.setComponentSequences(subject, componentDefinitions, sequenceMap);
     if (typeof view.setSelectedComponent === "function") {
       view.setSelectedComponent(getSelectedComponentId(subject));
     }
   }
+
+  return true;
 }
 
-async function buildComparisonVisualization(targetCanvas, subject, sequence, componentData = null) {
+async function buildComparisonVisualization(
+  targetCanvas,
+  subject,
+  sequence,
+  componentData = null,
+  shouldContinue = () => true
+) {
   const activeDef = getVisualizationDefinition(
     visualizationMode,
     getActiveVisualizationId()
@@ -2241,7 +2268,16 @@ async function buildComparisonVisualization(targetCanvas, subject, sequence, com
     updateVisualizationSurfaceLayout(targetCanvas, targetCanvas.parentElement, componentData);
   }
 
-  await syncVisualizationInstanceData(view, subject);
+  const dataApplied = await syncVisualizationInstanceData(
+    view,
+    subject,
+    componentData,
+    shouldContinue
+  );
+  if (!dataApplied || !shouldContinue()) {
+    return null;
+  }
+
   view.setFrame(currentFrame);
   return view;
 }
@@ -2376,6 +2412,14 @@ async function refreshComparisonMode() {
     return;
   }
 
+  const refreshGeneration = ++comparisonRefreshGeneration;
+  const isCurrentRefresh = () => (
+    comparisonState.active &&
+    refreshGeneration === comparisonRefreshGeneration &&
+    getCurrentSubject() === currentSubject &&
+    getNormalReferenceSubject() === normalSubject
+  );
+
   try {
     const activeDef = getVisualizationDefinition(
       visualizationMode,
@@ -2383,6 +2427,10 @@ async function refreshComparisonMode() {
     );
     await ensureSubjectMetadata(currentSubject);
     await ensureSubjectMetadata(normalSubject);
+    if (!isCurrentRefresh()) {
+      return;
+    }
+
     comparisonState.current.subjectId = currentSubject;
     comparisonState.normal.subjectId = normalSubject;
 
@@ -2393,11 +2441,18 @@ async function refreshComparisonMode() {
       fetchSequenceData(currentSubject, currentDescriptor),
       fetchSequenceData(normalSubject, normalDescriptor)
     ]);
+    if (!isCurrentRefresh()) {
+      return;
+    }
 
     comparisonState.current.sequenceData = currentSequence;
     comparisonState.normal.sequenceData = normalSequence;
 
     const varianceData = await ensureJointVarianceData();
+    if (!isCurrentRefresh()) {
+      return;
+    }
+
     const currentComponents = activeDef?.id === "componentvariance"
       ? (varianceData.get(currentSubject) || getSubjectComponentDefinitions(currentSubject))
       : null;
@@ -2408,18 +2463,28 @@ async function refreshComparisonMode() {
     updateCompareCanvasLayouts(currentComponents, normalComponents);
     updateComparisonTitles();
 
-    comparisonState.current.visualization = await buildComparisonVisualization(
-      compareCurrentVisualization,
-      currentSubject,
-      currentSequence,
-      currentComponents
-    );
-    comparisonState.normal.visualization = await buildComparisonVisualization(
-      compareNormalVisualization,
-      normalSubject,
-      normalSequence,
-      normalComponents
-    );
+    const [currentVisualization, normalVisualization] = await Promise.all([
+      buildComparisonVisualization(
+        compareCurrentVisualization,
+        currentSubject,
+        currentSequence,
+        currentComponents,
+        isCurrentRefresh
+      ),
+      buildComparisonVisualization(
+        compareNormalVisualization,
+        normalSubject,
+        normalSequence,
+        normalComponents,
+        isCurrentRefresh
+      )
+    ]);
+    if (!isCurrentRefresh()) {
+      return;
+    }
+
+    comparisonState.current.visualization = currentVisualization;
+    comparisonState.normal.visualization = normalVisualization;
 
     drawSkeletonFrame(
       compareCurrentViewer?.getContext("2d"),
@@ -2461,6 +2526,7 @@ function enterComparisonMode() {
 }
 
 function exitComparisonMode() {
+  comparisonRefreshGeneration += 1;
   comparisonState.active = false;
   comparisonState.displayMode = "visual";
   comparisonState.current.sequenceData = null;
