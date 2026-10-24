@@ -997,7 +997,7 @@ function clampSurveyPanelToViewport() {
   if (!surveyPanel) return;
 
   if (surveyPanel.classList.contains("is-minimized")) {
-    placeSurveyPanelBottomRight();
+    placeSurveyPanelBottomLeft();
     return;
   }
 
@@ -1023,12 +1023,12 @@ function afterSurveyPanelResize(callback) {
   });
 }
 
-function placeSurveyPanelBottomRight() {
+function placeSurveyPanelBottomLeft() {
   if (!surveyPanel) return;
 
-  surveyPanel.style.left = "auto";
+  surveyPanel.style.left = "12px";
   surveyPanel.style.top = "auto";
-  surveyPanel.style.right = "12px";
+  surveyPanel.style.right = "auto";
   surveyPanel.style.bottom = "12px";
 }
 
@@ -1064,7 +1064,7 @@ function setSurveyMinimized(isMinimized) {
   );
   afterSurveyPanelResize(() => {
     if (isMinimized) {
-      placeSurveyPanelBottomRight();
+      placeSurveyPanelBottomLeft();
     } else {
       clampSurveyPanelToViewport();
     }
