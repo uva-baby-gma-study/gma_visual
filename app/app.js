@@ -100,6 +100,7 @@ const comparisonState = {
 let caregiverVisualizationExplanations = {};
 let dynamicHeatmapLoadingDepth = 0;
 let comparisonRefreshGeneration = 0;
+let surveyMinimizedHasCustomPosition = false;
 
 // Your 17 joints => 34 dims (x,y)
 const joints = [
@@ -996,7 +997,10 @@ async function withDynamicHeatmapLoading(task) {
 function clampSurveyPanelToViewport() {
   if (!surveyPanel) return;
 
-  if (surveyPanel.classList.contains("is-minimized")) {
+  if (
+    surveyPanel.classList.contains("is-minimized") &&
+    !surveyMinimizedHasCustomPosition
+  ) {
     placeSurveyPanelBottomLeft();
     return;
   }
@@ -1064,7 +1068,11 @@ function setSurveyMinimized(isMinimized) {
   );
   afterSurveyPanelResize(() => {
     if (isMinimized) {
-      placeSurveyPanelBottomLeft();
+      if (surveyMinimizedHasCustomPosition) {
+        clampSurveyPanelToViewport();
+      } else {
+        placeSurveyPanelBottomLeft();
+      }
     } else {
       clampSurveyPanelToViewport();
     }
@@ -1142,6 +1150,9 @@ function initSurveyPanelControls() {
 
     surveyPanel.style.left = `${left}px`;
     surveyPanel.style.top = `${top}px`;
+    if (surveyPanel.classList.contains("is-minimized")) {
+      surveyMinimizedHasCustomPosition = true;
+    }
   });
 
   surveyHeader.addEventListener("pointerup", event => {
