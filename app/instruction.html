@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Instruction Video | GMA Viewer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+        background: #0d1117;
+        color: #f8fafc;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 32px 20px;
+        box-sizing: border-box;
+        background:
+          radial-gradient(circle at 15% 10%, rgba(37, 99, 235, 0.18), transparent 36rem),
+          #0d1117;
+      }
+
+      main {
+        width: min(100%, 1100px);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(1.7rem, 4vw, 2.6rem);
+      }
+
+      p {
+        margin: 0 0 24px;
+        color: #b6c2d4;
+      }
+
+      video {
+        display: block;
+        width: 100%;
+        border-radius: 16px;
+        background: #000;
+        box-shadow: 0 20px 55px rgba(0, 0, 0, 0.4);
+      }
+
+      a {
+        display: inline-block;
+        margin-top: 20px;
+        color: #93c5fd;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Instruction Video</h1>
+      <p>Watch this brief guide before using the GMA Viewer.</p>
+      <video controls preload="metadata">
+        <source src="../instruction%20video.mp4" type="video/mp4">
+        Your browser does not support video playback.
+      </video>
+      <a href="./">Open the GMA Viewer</a>
+    </main>
+  </body>
+</html>
