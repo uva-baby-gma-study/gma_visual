@@ -911,12 +911,9 @@
       <div class="section">
         <div class="sectionTitle">Controls</div>
 
-        <div class="row">
-          <label for="subjectSelect">Infant</label>
-          <select id="subjectSelect">
-            <option value="">Loading…</option>
-          </select>
-        </div>
+        <select id="subjectSelect" hidden aria-hidden="true" tabindex="-1">
+          <option value="104" selected>Infant 104</option>
+        </select>
 
         <div class="row small" id="status"></div>
 
@@ -1025,10 +1022,6 @@
                 <div id="compareNormalTitle" class="comparePaneTitle">Normal Baby</div>
                 <div id="compareNormalSubtitle" class="comparePaneSubtitle" style="text-align:left;">Reference subject</div>
               </div>
-              <div class="normalReferenceControls" aria-label="Normal baby reference selector">
-                <button id="normalReferencePrevBtn" class="normalReferenceBtn" type="button" title="Previous normal baby">▲</button>
-                <button id="normalReferenceNextBtn" class="normalReferenceBtn" type="button" title="Next normal baby">▼</button>
-              </div>
             </div>
             <button id="exitCompareBtn" class="exitCompareBtn" type="button">Exit Comparison</button>
           </div>
@@ -1095,7 +1088,7 @@
     class="heatmapLoadingOverlay"
     role="status"
     aria-live="polite"
-    aria-label="Loading dynamic heatmap"
+    aria-label="Loading visualization"
     hidden
   >
     <div class="heatmapLoadingCard">

@@ -19,8 +19,6 @@ const compareModeStatus = document.getElementById("compareModeStatus");
 const compareViewToggleBtn = document.getElementById("compareViewToggleBtn");
 const compareWithNormalBtn = document.getElementById("compareWithNormalBtn");
 const exitCompareBtn = document.getElementById("exitCompareBtn");
-const normalReferencePrevBtn = document.getElementById("normalReferencePrevBtn");
-const normalReferenceNextBtn = document.getElementById("normalReferenceNextBtn");
 
 const subjectSelect = document.getElementById("subjectSelect");
 const frameSlider = document.getElementById("frameSlider");
@@ -67,9 +65,9 @@ let componentSequencesBySubject = new Map();
 let currentSubjectMetadata = null;
 let activeSequenceDescriptor = null;
 let visualizationExplanationPromise = null;
-let normalReferenceDataPromise = null;
-let normalReferenceOptions = [];
-let selectedNormalReferenceIndex = 0;
+const FIXED_CURRENT_SUBJECT = "104";
+const FIXED_NORMAL_SUBJECT = "64";
+const normalReferenceOptions = [{ subjectId: FIXED_NORMAL_SUBJECT, label: "" }];
 const DEFAULT_VISUALIZATION_CANVAS_HEIGHT = 600;
 const DEFAULT_VIEWER_CANVAS_SIZE = 600;
 const MAX_LINE_PLOT_JOINTS = 6;
@@ -98,7 +96,7 @@ const comparisonState = {
   }
 };
 let caregiverVisualizationExplanations = {};
-let dynamicHeatmapLoadingDepth = 0;
+let appLoadingDepth = 0;
 let comparisonRefreshGeneration = 0;
 let surveyMinimizedHasCustomPosition = false;
 
@@ -132,20 +130,25 @@ const heatmapJointNames = visualizationJointNames.filter(
 const componentVarianceJointNames = joints.filter(
   j => !["nose", "left_eye", "right_eye", "left_ear", "right_ear"].includes(j)
 );
-const defaultTraceJointNames = ["left_wrist", "right_wrist"];
+const defaultVisualizationJointNames = [
+  "left_knee",
+  "right_knee",
+  "left_ankle",
+  "right_ankle"
+];
 const selectedJointsByVisualization = {
   dynamic: {
-    heatmap: heatmapJointNames.slice(),
-    lineplot: defaultTraceJointNames.slice(),
-    stackedlineplot: defaultTraceJointNames.slice(),
-    episodes: defaultTraceJointNames.slice(),
+    heatmap: defaultVisualizationJointNames.slice(),
+    lineplot: defaultVisualizationJointNames.slice(),
+    stackedlineplot: defaultVisualizationJointNames.slice(),
+    episodes: defaultVisualizationJointNames.slice(),
     componentvariance: []
   },
   static: {
-    heatmap: heatmapJointNames.slice(),
-    lineplot: defaultTraceJointNames.slice(),
-    stackedlineplot: defaultTraceJointNames.slice(),
-    episodes: defaultTraceJointNames.slice(),
+    heatmap: defaultVisualizationJointNames.slice(),
+    lineplot: defaultVisualizationJointNames.slice(),
+    stackedlineplot: defaultVisualizationJointNames.slice(),
+    episodes: defaultVisualizationJointNames.slice(),
     componentvariance: []
   }
 };
@@ -291,11 +294,11 @@ async function loadVisualizationExplanations() {
 }
 
 function getNormalReferenceSubject() {
-  return normalReferenceOptions[selectedNormalReferenceIndex]?.subjectId || "";
+  return FIXED_NORMAL_SUBJECT;
 }
 
 function getNormalReferenceLabel() {
-  return normalReferenceOptions[selectedNormalReferenceIndex]?.label || "";
+  return "";
 }
 
 function isNormalReferenceSubject(subject) {
@@ -305,12 +308,7 @@ function isNormalReferenceSubject(subject) {
 
 function getSubjectDisplayName(subject) {
   if (!subject) return "No subject";
-  const normalIndex = normalReferenceOptions.findIndex(
-    option => option.subjectId === String(subject)
-  );
-  return normalIndex >= 0
-    ? `Normal Baby ${normalReferenceOptions[normalIndex].label || normalIndex + 1}`
-    : `Infant ${subject}`;
+  return isNormalReferenceSubject(subject) ? "Normal Baby" : `Infant ${subject}`;
 }
 
 async function listSubjectFolders(dirUrl) {
@@ -471,44 +469,6 @@ async function ensureJointVarianceData() {
   return jointVarianceDataPromise;
 }
 
-async function ensureNormalReferenceOptions() {
-  if (normalReferenceDataPromise) {
-    return normalReferenceDataPromise;
-  }
-
-  const base = window.__RECON_BASE__;
-  if (!base) {
-    normalReferenceOptions = [];
-    return normalReferenceOptions;
-  }
-
-  normalReferenceDataPromise = (async () => {
-    try {
-      const url = new URL("normal_index.json", base).toString();
-      const rows = await fetchJson(url);
-      normalReferenceOptions = Array.isArray(rows)
-        ? rows
-            .map((row, index) => ({
-              subjectId: String(row.subjectId ?? row.subject_id ?? ""),
-              label: String(row.label ?? index + 1)
-            }))
-            .filter(row => row.subjectId)
-        : [];
-      selectedNormalReferenceIndex = Math.min(
-        selectedNormalReferenceIndex,
-        Math.max(0, normalReferenceOptions.length - 1)
-      );
-      return normalReferenceOptions;
-    } catch (error) {
-      console.warn("No normal reference index found:", error);
-      normalReferenceOptions = [];
-      return normalReferenceOptions;
-    }
-  })();
-
-  return normalReferenceDataPromise;
-}
-
 async function ensureSubjectMetadata(subject) {
   if (!subject || !window.__RECON_BASE__) {
     return null;
@@ -595,12 +555,25 @@ async function ensureComponentSequences(subject = getCurrentSubject()) {
     return componentSequencePromisesBySubject.get(subject);
   }
 
-  const subjectMeta =
+  let subjectMeta =
     subject === getCurrentSubject()
       ? currentSubjectMetadata
       : metadataBySubject.get(subject);
 
-  if (!subjectMeta?.components?.length || !window.__RECON_BASE__) {
+  if (!window.__RECON_BASE__) {
+    return new Map();
+  }
+
+  // A user can open Component variance before initial metadata finishes loading.
+  // Load it here rather than incorrectly treating the subject as having no components.
+  if (!subjectMeta) {
+    subjectMeta = await ensureSubjectMetadata(subject);
+    if (subject === getCurrentSubject()) {
+      currentSubjectMetadata = subjectMeta;
+    }
+  }
+
+  if (!subjectMeta?.components?.length) {
     return new Map();
   }
 
@@ -745,32 +718,6 @@ function updateCompareButtonVisibility() {
     !subject ||
     isNormalReferenceSubject(subject) ||
     normalReferenceOptions.length === 0;
-}
-
-function updateNormalReferenceControls() {
-  const hasMultipleReferences = normalReferenceOptions.length > 1;
-  if (normalReferencePrevBtn) {
-    normalReferencePrevBtn.disabled = !hasMultipleReferences;
-  }
-  if (normalReferenceNextBtn) {
-    normalReferenceNextBtn.disabled = !hasMultipleReferences;
-  }
-}
-
-function selectNormalReference(delta) {
-  if (!normalReferenceOptions.length) {
-    return;
-  }
-
-  const count = normalReferenceOptions.length;
-  selectedNormalReferenceIndex =
-    (selectedNormalReferenceIndex + delta + count) % count;
-  comparisonState.normal.subjectId = getNormalReferenceSubject();
-  updateComparisonTitles();
-
-  if (comparisonState.active) {
-    requestComparisonRefresh();
-  }
 }
 
 function getSelectedComponentId(subject = getCurrentSubject()) {
@@ -970,8 +917,12 @@ async function withDynamicHeatmapLoading(task) {
     return task();
   }
 
-  const isOuterUpdate = dynamicHeatmapLoadingDepth === 0;
-  dynamicHeatmapLoadingDepth += 1;
+  return withAppLoading(task);
+}
+
+async function withAppLoading(task) {
+  const isOuterUpdate = appLoadingDepth === 0;
+  appLoadingDepth += 1;
   const wasPlaying = isOuterUpdate && playing;
 
   if (isOuterUpdate) {
@@ -983,7 +934,7 @@ async function withDynamicHeatmapLoading(task) {
   try {
     return await task();
   } finally {
-    dynamicHeatmapLoadingDepth -= 1;
+    appLoadingDepth -= 1;
     if (isOuterUpdate) {
       setDynamicHeatmapLoading(false);
       if (wasPlaying) {
@@ -1761,8 +1712,8 @@ async function createVisualization() {
       activeVisualization.draw();
     }
 
-    syncVarianceVisualizationData();
-    syncComponentVarianceSequences();
+    await syncVarianceVisualizationData();
+    await syncComponentVarianceSequences();
 
     updateVisualizationButtons();
     renderVisualizationTabs();
@@ -1808,8 +1759,10 @@ function setVisualizationMode(mode) {
   }
 
   visualizationMode = mode;
-  createVisualization()
-    .then(() => syncSourceForCurrentView())
+  withAppLoading(async () => {
+    await createVisualization();
+    await syncSourceForCurrentView();
+  })
     .catch(error => {
       console.error("Failed to sync source for mode change:", error);
     });
@@ -1823,8 +1776,10 @@ function setVisualizationType(visualizationId) {
   }
 
   selectedVisualizationByMode[visualizationMode] = visualizationId;
-  createVisualization()
-    .then(() => syncSourceForCurrentView())
+  withAppLoading(async () => {
+    await createVisualization();
+    await syncSourceForCurrentView();
+  })
     .catch(error => {
       console.error("Failed to sync source for visualization change:", error);
     });
@@ -1913,14 +1868,6 @@ if (compareNormalVisualization) {
   };
 }
 
-if (normalReferencePrevBtn) {
-  normalReferencePrevBtn.onclick = () => selectNormalReference(-1);
-}
-
-if (normalReferenceNextBtn) {
-  normalReferenceNextBtn.onclick = () => selectNormalReference(1);
-}
-
 if (exitCompareBtn) {
   exitCompareBtn.onclick = () => exitComparisonMode();
 }
@@ -1945,28 +1892,21 @@ document.addEventListener("keydown", event => {
 
 // --------- Data loading ----------
 async function loadSubjects() {
-  statusEl.textContent = "Loading infants…";
+  statusEl.textContent = "";
 
   try {
-    const { dir, subjects } = await resolveReconDir();
+    const { dir } = await resolveReconDir();
     window.__RECON_BASE__ = dir;
-    await ensureNormalReferenceOptions();
-    updateNormalReferenceControls();
-
-    const visibleSubjects = subjects.filter(subject => !isNormalReferenceSubject(subject));
-
-    subjectSelect.innerHTML = `<option value="">-- Select Infant --</option>`;
-    visibleSubjects.sort().forEach(s => {
-      const opt = document.createElement("option");
-      opt.value = s;
-      opt.textContent = s;
-      subjectSelect.appendChild(opt);
-    });
-
-    statusEl.textContent = `Found ${visibleSubjects.length} infants.`;
+    subjectSelect.innerHTML = `<option value="${FIXED_CURRENT_SUBJECT}">Infant ${FIXED_CURRENT_SUBJECT}</option>`;
+    subjectSelect.value = FIXED_CURRENT_SUBJECT;
+    currentSubjectMetadata = null;
+    updateSourceControls();
+    await loadMetadata(FIXED_CURRENT_SUBJECT);
+    await loadCurrentSequenceSource();
+    statusEl.textContent = "";
   } catch (err) {
     console.error(err);
-    subjectSelect.innerHTML = `<option value="">(no infants found)</option>`;
+    subjectSelect.innerHTML = `<option value="">(Infant ${FIXED_CURRENT_SUBJECT} unavailable)</option>`;
     statusEl.textContent = `ERROR: ${err.message}`;
   }
 }
@@ -1977,7 +1917,7 @@ async function loadSequenceSource(subject, descriptor) {
 
   const sequencePath = descriptor?.path || DEFAULT_SEQUENCE_FILE;
   const descriptorLabel = descriptor?.label || sequencePath;
-  statusEl.textContent = `Loading ${subject}/${descriptorLabel}…`;
+  statusEl.textContent = "";
 
   try {
     sequenceData = await fetchSequenceData(subject, descriptor);
@@ -1993,8 +1933,6 @@ async function loadSequenceSource(subject, descriptor) {
   updateRangeFill(frameSlider);
   currentFrame = 0;
 
-  statusEl.textContent = `Loaded ${descriptorLabel} (${T} frames).`;
-
   await withDynamicHeatmapLoading(async () => {
     if (activeVisualization) {
       if (typeof activeVisualization.setFullSequence === "function") {
@@ -2003,8 +1941,8 @@ async function loadSequenceSource(subject, descriptor) {
       activeVisualization.setSequence(buildVisualizationSequence(sequenceData));
     }
 
-    syncVarianceVisualizationData();
-    syncComponentVarianceSequences();
+    await syncVarianceVisualizationData();
+    await syncComponentVarianceSequences();
     drawFrame();
 
     if (comparisonState.active) {
@@ -2068,7 +2006,7 @@ async function loadCurrentSequenceSource() {
     activeSequenceDescriptor = null;
     ctx.fillStyle = "#0d0d0d";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    statusEl.textContent = "Select a component to preview its motion.";
+    statusEl.textContent = "";
     frameSlider.max = "0";
     frameSlider.value = "0";
     updateRangeFill(frameSlider);
@@ -2090,10 +2028,7 @@ async function loadMetadata(subject) {
 
     metaBox.innerHTML =
       `<div><b>subject_id:</b> ${meta.subject_id ?? subject}</div>` +
-      `<div><b>target:</b> ${meta.target ?? ""}</div>` +
-      `<div><b>gma:</b> ${meta.gma ?? ""}</div>` +
       `<div><b>sequence_length:</b> ${meta.sequence_length ?? ""}</div>` +
-      `<div><b>optimal_ranks:</b> ${meta.optimal_ranks ?? ""}</div>` +
       `<div><b>n_components:</b> ${meta.n_components ?? ""}</div>`;
     updateSourceControls();
   } catch (e) {
@@ -2173,7 +2108,7 @@ function drawSkeletonFrame(targetCtx, targetCanvas, targetSequence, frame) {
 }
 
 function requestComparisonRefresh() {
-  withDynamicHeatmapLoading(() => refreshComparisonMode()).catch(error => {
+  withAppLoading(() => refreshComparisonMode()).catch(error => {
     console.error("Failed to refresh comparison mode:", error);
   });
 }
@@ -2531,7 +2466,6 @@ function enterComparisonMode() {
     compareModeView.hidden = false;
   }
   updateComparisonDisplayModeUi();
-  updateNormalReferenceControls();
   updateCompareButtonVisibility();
   requestComparisonRefresh();
 }
@@ -2552,7 +2486,6 @@ function exitComparisonMode() {
     compareModeView.hidden = true;
   }
   updateComparisonDisplayModeUi();
-  updateNormalReferenceControls();
 
   updateCompareButtonVisibility();
 }
@@ -2683,19 +2616,27 @@ if (visualizationCanvas) {
 }
 
 // --------- Startup ----------
-window.addEventListener("resize", () => {
-  handleCanvasResize();
-  clampSurveyPanelToViewport();
+async function initializeApplication() {
+  window.addEventListener("resize", () => {
+    handleCanvasResize();
+    clampSurveyPanelToViewport();
+  });
+  initSurveyPanelControls();
+  loadVisualizationExplanations();
+  syncAllCanvasLayouts();
+  updateRangeFill(frameSlider);
+  updateRangeFill(zoomSlider);
+  updateRangeFill(speedSlider);
+  updateControlValueLabels();
+  updateCompareButtonVisibility();
+
+  await withAppLoading(async () => {
+    await loadSubjects();
+    await createVisualization();
+  });
+}
+
+initializeApplication().catch(error => {
+  console.error("Failed to initialize the viewer:", error);
+  statusEl.textContent = `ERROR: ${error.message}`;
 });
-initSurveyPanelControls();
-loadVisualizationExplanations();
-createVisualization().catch(error => {
-  console.error("Failed to create visualization:", error);
-});
-syncAllCanvasLayouts();
-updateRangeFill(frameSlider);
-updateRangeFill(zoomSlider);
-updateRangeFill(speedSlider);
-updateControlValueLabels();
-updateCompareButtonVisibility();
-loadSubjects();
